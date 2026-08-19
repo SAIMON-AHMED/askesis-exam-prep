@@ -18,3 +18,4 @@ out/
 # Local test artifacts
 pw_*.png
 .vercel
+.env*
