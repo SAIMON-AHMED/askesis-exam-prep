@@ -22,7 +22,7 @@ export default function Navbar() {
   const context = useContext(ExamContext);
   const selectedExam = context?.selectedExam || null;
 
-  const isInsideExam = pathname.startsWith('/exams/') && selectedExam;
+  const isInsideExam = pathname?.startsWith('/exams/') && selectedExam;
 
   return (
     <header className="navbar" data-exam={selectedExam?.id}>

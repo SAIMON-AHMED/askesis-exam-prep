@@ -4,7 +4,6 @@ const nextConfig = {
   poweredByHeader: false,
 
   // Performance optimizations for Phase 7
-  swcMinify: true,
   compress: true,
 
   // Image optimization
@@ -59,27 +58,6 @@ const nextConfig = {
   // Environment variables
   env: {
     NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8001',
-  },
-
-  // Webpack optimizations
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.optimization.splitChunks.cacheGroups = {
-        ...config.optimization.splitChunks.cacheGroups,
-        react: {
-          test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
-          name: 'react',
-          priority: 10,
-        },
-        vendor: {
-          test: /[\\/]node_modules[\\/]/,
-          name: 'vendors',
-          priority: -10,
-        },
-      }
-    }
-
-    return config
   },
 };
 

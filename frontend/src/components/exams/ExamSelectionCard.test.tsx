@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@/__tests__/test-utils'
-import ExamSelectionCard from '@/components/exams/ExamSelectionCard'
+import { ExamSelectionCard } from '@/components/exams/ExamSelectionCard'
 
 const mockExam = {
   id: 'sat',
