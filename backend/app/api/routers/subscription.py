@@ -200,8 +200,6 @@ def get_subscription_usage(
 
     plan = SUBSCRIPTION_PLANS.get(subscription.plan_name, SUBSCRIPTION_PLANS["free"])
 
-    # In a real app, track actual usage from practice sessions
-    # For now, return the limits
     return {
         "plan": subscription.plan_name,
         "status": subscription.status.value,

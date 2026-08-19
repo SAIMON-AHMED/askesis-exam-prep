@@ -110,8 +110,6 @@ def update_preferences(
     db: Session = Depends(get_db),
 ) -> dict:
     """Update user preferences (stored in a future preferences table)."""
-    # For now, this is a placeholder for future preference storage
-    # Can extend User model or create a UserPreferences table
     return {
         "message": "Preferences updated",
         "preferences": preferences,

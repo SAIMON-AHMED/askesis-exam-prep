@@ -3,7 +3,6 @@ import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-# from starlette.middleware.gzip import GZIPMiddleware  # Commenting out for now
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -19,9 +18,6 @@ app = FastAPI(title="Askesis API", version="0.1.0")
 # Initialize rate limiter
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
-
-# Middleware stack
-# app.add_middleware(GZIPMiddleware, minimum_size=1000)  # Compress responses > 1KB - disabled for now
 
 # Build CORS origins list
 cors_origins = [
