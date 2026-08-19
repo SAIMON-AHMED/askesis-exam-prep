@@ -1,0 +1,21 @@
+# Askesis SEO Configuration
+# Allow all search engines to crawl the site
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /.vercel
+
+# Allow specific crawlers for indexing
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# Sitemap location
+Sitemap: https://askesisprep.com/sitemap.xml
+
+# Crawl delay (ms) - be nice to servers
+Crawl-delay: 1

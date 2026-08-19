@@ -1,0 +1,59 @@
+{
+  "@context": "https://schema.org",
+  "@type": "EducationalOrganization",
+  "name": "Askesis",
+  "description": "Adaptive exam preparation platform for standardized tests",
+  "url": "https://askesis-tawny.vercel.app",
+  "logo": "https://askesis-tawny.vercel.app/logo.png",
+  "sameAs": [
+    "https://twitter.com/askesis",
+    "https://www.linkedin.com/company/askesis"
+  ],
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "contactType": "Customer Support",
+    "url": "https://askesis-tawny.vercel.app"
+  },
+  "offers": [
+    {
+      "@type": "EducationalCourse",
+      "name": "SAT Preparation",
+      "description": "Complete SAT prep with adaptive questions and full-length exams",
+      "provider": {
+        "@type": "EducationalOrganization",
+        "name": "Askesis"
+      },
+      "hasCourseInstance": {
+        "@type": "CourseInstance",
+        "inLanguage": "en"
+      }
+    },
+    {
+      "@type": "EducationalCourse",
+      "name": "ACT Preparation",
+      "description": "Complete ACT prep with adaptive questions and full-length exams",
+      "provider": {
+        "@type": "EducationalOrganization",
+        "name": "Askesis"
+      }
+    },
+    {
+      "@type": "EducationalCourse",
+      "name": "GRE Preparation",
+      "description": "Complete GRE prep with adaptive questions and full-length exams",
+      "provider": {
+        "@type": "EducationalOrganization",
+        "name": "Askesis"
+      }
+    },
+    {
+      "@type": "EducationalCourse",
+      "name": "GMAT Preparation",
+      "description": "Complete GMAT prep with adaptive questions and full-length exams",
+      "provider": {
+        "@type": "EducationalOrganization",
+        "name": "Askesis"
+      }
+    }
+  ]
+}

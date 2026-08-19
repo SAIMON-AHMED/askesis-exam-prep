@@ -1,0 +1,83 @@
+GENERATION PLAN: Create comprehensive learning materials for all exam topics
+
+EXAMS & TOPIC COUNTS:
+- SAT: 10 topics (COMPLETE)
+- ACT: 17 topics (3 complete, 14 needed)
+- GRE: 9 topics (0 complete)
+- GMAT: 12 topics (0 complete)
+- SHSAT: 6 topics (0 complete)
+- Regents: 9 topics (0 complete)
+
+TOTAL TOPICS NEEDED: 50 topics, ~14 complete
+NEW TOPICS TO CREATE: 36 topics
+
+STRATEGY:
+Each topic will have:
+- Concept overview (300-400 words)
+- 2-3 key strategies with examples
+- 1-2 concept sections
+- 2 worked examples (MCQ format)
+- 8 practice questions with explanations
+
+This represents ~200-250 lines per topic
+Total new content: ~7,200-9,000 lines
+
+REMAINING ACT TOPICS (14):
+1. pre-algebra
+2. elementary-algebra  
+3. intermediate-algebra
+4. coordinate-geometry
+5. plane-geometry
+6. trigonometry-act
+7. prose-fiction
+8. humanities
+9. social-science
+10. natural-science
+11. biology
+12. chemistry
+13. physics
+14. earth-science
+
+GRE TOPICS (9):
+1. text-completion
+2. sentence-equivalence
+3. reading-comprehension-gre
+4. arithmetic
+5. algebra-gre
+6. geometry-gre
+7. data-analysis
+8. quantitative-comparison
+9. numeric-entry
+
+GMAT TOPICS (12):
+1. sentence-correction
+2. critical-reasoning
+3. reading-comprehension-gmat
+4. data-sufficiency
+5. problem-solving
+6. algebra-gmat
+7. geometry-gmat
+8. statistics-gmat
+9. word-problems
+10. inequalities
+11. sequences-series
+12. combinatorics
+
+SHSAT TOPICS (6):
+1. verbal-reasoning
+2. reading-comprehension-shsat
+3. math-algebra-shsat
+4. geometry-shsat
+5. word-problems-shsat
+6. logic-reasoning
+
+REGENTS TOPICS (9):
+1. algebra-1
+2. geometry-regents
+3. algebra-2
+4. trigonometry-regents
+5. precalculus
+6. statistics-regents
+7. chemistry
+8. physics-regents
+9. earth-science-regents
