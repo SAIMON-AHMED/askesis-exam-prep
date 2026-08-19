@@ -1,4 +1,4 @@
-"""Essay evaluation endpoints with ChatGPT-based marking and generation."""
+"""Essay evaluation endpoints with AI-service-based marking and generation."""
 import logging
 from typing import Optional
 
@@ -54,7 +54,7 @@ class EssayFeedback:
 @router.post("/generate", response_model=list[EssayGenerationResponse])
 async def generate_essay_questions_endpoint(request: EssayGenerationRequest) -> list[dict]:
     """
-    Generate essay/written assessment questions using ChatGPT.
+    Generate essay/written assessment questions using the AI service.
 
     Args:
         request: Essay generation request with exam_type, topic, difficulty, and number_of_questions
@@ -99,7 +99,7 @@ async def generate_essay_questions_endpoint(request: EssayGenerationRequest) -> 
 @router.post("/evaluate")
 async def evaluate_essay(request: EssayEvaluationRequest) -> dict:
     """
-    Evaluate an essay response using ChatGPT-based marking.
+    Evaluate an essay response using AI-service-based marking.
 
     Args:
         request: Essay evaluation request with question, response, rubric, and model answer

@@ -1,6 +1,6 @@
-"""ChatGPT-powered essay and written assessment service.
+"""AI-service-powered essay and written assessment service.
 
-Handles generation of essay prompts and grading of student responses using ChatGPT API.
+Handles generation of essay prompts and grading of student responses using the AI service API.
 """
 import json
 from typing import Any
@@ -73,14 +73,14 @@ Be rigorous but fair. Focus on:
 """
 
 
-def _call_chatgpt(prompt: str) -> str:
-    """Call ChatGPT API and return the response text."""
-    if not settings.chatgpt_api_key:
-        raise ValueError("CHATGPT_API_KEY is not configured")
+def _call_ai_service(prompt: str) -> str:
+    """Call the AI service API and return the response text."""
+    if not settings.ai_service_api_key:
+        raise ValueError("AI_SERVICE_API_KEY is not configured")
 
-    client = OpenAI(api_key=settings.chatgpt_api_key)
+    client = OpenAI(api_key=settings.ai_service_api_key)
     response = client.chat.completions.create(
-        model=settings.chatgpt_model,
+        model=settings.ai_service_model,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,  # Lower temperature for consistent grading
     )
@@ -108,7 +108,7 @@ def generate_essay_questions(
     number_of_questions: int = 1,
     avoid_questions: list[str] | None = None,
 ) -> list[dict[str, Any]]:
-    """Generate essay/written assessment questions using ChatGPT.
+    """Generate essay/written assessment questions using the AI service.
 
     Args:
         exam_type: Type of exam (e.g., 'SAT', 'ACT', 'GRE')
@@ -140,12 +140,12 @@ def generate_essay_questions(
         avoid_section=avoid_section,
     )
 
-    raw_output = _call_chatgpt(prompt)
+    raw_output = _call_ai_service(prompt)
 
     try:
         parsed = json.loads(raw_output)
     except json.JSONDecodeError as exc:
-        raise ValueError(f"ChatGPT did not return valid JSON: {exc}") from exc
+        raise ValueError(f"AI service did not return valid JSON: {exc}") from exc
 
     if not isinstance(parsed, list):
         raise ValueError("Expected a JSON array of essay questions")
@@ -168,7 +168,7 @@ def grade_essay(
     student_essay: str,
     exam_type: str = "General",
 ) -> dict[str, Any]:
-    """Grade a student essay using ChatGPT.
+    """Grade a student essay using the AI service.
 
     Args:
         prompt: The original essay prompt
@@ -193,12 +193,12 @@ def grade_essay(
         student_essay=student_essay,
     )
 
-    raw_output = _call_chatgpt(grading_prompt)
+    raw_output = _call_ai_service(grading_prompt)
 
     try:
         grading_result = json.loads(raw_output)
     except json.JSONDecodeError as exc:
-        raise ValueError(f"ChatGPT did not return valid JSON for grading: {exc}") from exc
+        raise ValueError(f"AI service did not return valid JSON for grading: {exc}") from exc
 
     # Validate required fields
     required_fields = ["score_out_of_100", "rubric_scores", "strengths", "areas_for_improvement", "feedback", "grade_letter"]

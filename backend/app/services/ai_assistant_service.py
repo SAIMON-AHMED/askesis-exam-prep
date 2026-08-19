@@ -20,10 +20,10 @@ just stating the final answer, unless they explicitly ask for the answer.
 
 def chat_with_assistant(message: str, history: list[dict[str, str]], context: str | None = None) -> str:
     """Send a chat message (with optional history and page context) and return the reply text."""
-    if not settings.chatgpt_api_key:
-        raise ValueError("CHATGPT_API_KEY is not configured")
+    if not settings.ai_service_api_key:
+        raise ValueError("AI_SERVICE_API_KEY is not configured")
 
-    client = OpenAI(api_key=settings.chatgpt_api_key)
+    client = OpenAI(api_key=settings.ai_service_api_key)
 
     messages: list[dict[str, str]] = [{"role": "system", "content": SYSTEM_PROMPT}]
     if context:
@@ -39,7 +39,7 @@ def chat_with_assistant(message: str, history: list[dict[str, str]], context: st
     messages.append({"role": "user", "content": message})
 
     response = client.chat.completions.create(
-        model=settings.chatgpt_model,
+        model=settings.ai_service_model,
         messages=messages,
         temperature=0.5,
     )

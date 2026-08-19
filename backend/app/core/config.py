@@ -1,6 +1,6 @@
 """Application configuration loaded from environment variables."""
 from functools import lru_cache
-from pydantic import field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,8 +16,12 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
 
-    chatgpt_api_key: str = ""
-    chatgpt_model: str = "gpt-4o-mini"
+    ai_service_api_key: str = Field(
+        default="", validation_alias=AliasChoices("AI_SERVICE_API_KEY", "CHATGPT_API_KEY")
+    )
+    ai_service_model: str = Field(
+        default="gpt-4o-mini", validation_alias=AliasChoices("AI_SERVICE_MODEL", "CHATGPT_MODEL")
+    )
 
     stripe_secret_key: str = ""
     stripe_publishable_key: str = ""
