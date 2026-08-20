@@ -1,5 +1,6 @@
 """Timed exam endpoints: start a full mock exam, submit answers, get scored results."""
 import logging
+import time
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -28,6 +29,7 @@ def start_exam(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ExamSessionOut:
+    started = time.perf_counter()
     try:
         questions = build_exam_questions(
             db, payload.exam_type, payload.topics, payload.number_of_questions, user_id=current_user.id
@@ -37,6 +39,16 @@ def start_exam(
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY, detail="Could not generate exam questions"
         ) from exc
+
+    generation_seconds = time.perf_counter() - started
+    logger.info(
+        "exam_start exam_type=%s topics=%d requested=%d generated=%d generation_seconds=%.2f",
+        payload.exam_type,
+        len(payload.topics or []),
+        payload.number_of_questions,
+        len(questions),
+        generation_seconds,
+    )
 
     if not questions:
         raise HTTPException(

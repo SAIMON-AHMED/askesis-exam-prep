@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { ExamDefinition } from '@/lib/examConstants';
-import { countQuestionsByExamId } from '@/lib/practiceQuestionsData';
+import { getQuestionCount } from '@/lib/questionCounts';
 import { getCurriculumByExamId } from '@/lib/curriculumData';
 import { MOCK_TESTS_PER_EXAM } from '@/lib/mockTestsData';
 
@@ -27,7 +27,7 @@ export const ExamSelectionCard: React.FC<ExamSelectionCardProps> = ({
   onBuy,
 }) => {
   const router = useRouter();
-  const totalQuestions = countQuestionsByExamId(exam.id);
+  const totalQuestions = getQuestionCount(exam.id);
   const curriculum = getCurriculumByExamId(exam.id);
   const estimatedHours = curriculum.sections.reduce(
     (sum, section) => sum + section.topics.reduce((a, t) => a + t.estimatedHours, 0),

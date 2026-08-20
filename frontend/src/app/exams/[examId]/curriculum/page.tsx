@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { getExam } from '@/lib/examConstants';
 import { getCurriculumByExamId, Section, Topic } from '@/lib/curriculumData';
-import { countQuestionsByExamId } from '@/lib/practiceQuestionsData';
+import { getQuestionCount } from '@/lib/questionCounts';
 import SectionHeader from '@/components/exams/SectionHeader';
 import TopicCard from '@/components/exams/TopicCard';
 import { useExam } from '@/context/ExamContext';
@@ -136,7 +136,7 @@ export default function CurriculumPage() {
           <h1 style={pageTitle}>{curriculum.examName} Curriculum Map</h1>
           <p style={pageDescriptionStyle}>
             {curriculum.sections.length} sections • {curriculum.totalTopics} topics •{' '}
-            {countQuestionsByExamId(examId).toLocaleString()} questions
+            {getQuestionCount(examId).toLocaleString()} questions
           </p>
         </div>
 

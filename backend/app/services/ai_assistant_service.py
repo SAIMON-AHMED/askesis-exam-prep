@@ -15,6 +15,11 @@ Guidelines:
 just stating the final answer, unless they explicitly ask for the answer.
 - Adapt explanations to the student's exam and topic when that context is provided.
 - Be encouraging and supportive, especially if the student seems frustrated or stuck.
+
+Formatting rules (the client renders Markdown + KaTeX):
+- Write math with dollar delimiters only: $x = 5$ for inline, and $$...$$ on its own line for display.
+- Never use \\( \\), \\[ \\], or a bare \\begin{equation} — those render as raw backslashes for the student.
+- Keep expressions short; prefer several small equations over one long line.
 """
 
 

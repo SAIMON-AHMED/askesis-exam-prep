@@ -1,5 +1,6 @@
 """FastAPI application entrypoint."""
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,9 +12,29 @@ from app.core.config import get_settings
 from app.core.error_handlers import register_error_handlers
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
-app = FastAPI(title="Askesis API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Seed the curated question bank so mock tests are ready without a manual step."""
+    try:
+        from app.db.session import SessionLocal
+        from app.services.question_bank import seed_question_bank
+
+        db = SessionLocal()
+        try:
+            seed_question_bank(db)
+        finally:
+            db.close()
+    except Exception as exc:
+        # Never block startup on seeding; exams fall back to live generation.
+        logger.warning("Question bank seeding skipped: %s", exc)
+    yield
+
+
+app = FastAPI(title="Askesis API", version="0.1.0", lifespan=lifespan)
 
 # Initialize rate limiter
 limiter = Limiter(key_func=get_remote_address)

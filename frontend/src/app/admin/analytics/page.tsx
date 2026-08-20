@@ -2,8 +2,20 @@
 
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import dynamic from 'next/dynamic';
 import { useNotification } from '@/context/NotificationContext';
+
+const DailyActiveUsersChart = dynamic(
+  () => import('@/components/analytics/DailyActiveUsersChart'),
+  {
+    ssr: false,
+    loading: () => (
+      <div style={{ height: 300, display: 'grid', placeItems: 'center', color: '#6b7280' }}>
+        Loading chart…
+      </div>
+    ),
+  }
+);
 
 interface DailyActiveUsers {
   date: string;
@@ -86,15 +98,7 @@ export default function AdminAnalytics() {
           Daily Active Users (Last 30 Days)
         </h2>
 
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={dailyActiveUsers}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey="active_users" stroke="#3b82f6" strokeWidth={2} />
-          </LineChart>
-        </ResponsiveContainer>
+        <DailyActiveUsersChart data={dailyActiveUsers} />
       </div>
 
       {/* Event Breakdown */}

@@ -1,12 +1,27 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import StatCard from '@/components/analytics/StatCard';
-import {
-  WeeklyStudyChart,
-  StudyTimeBreakdownChart,
-  TopicPerformanceChart,
-} from '@/components/analytics/Charts';
+
+// Recharts is ~400 KB; defer it so the page shell and stats render without waiting on it.
+const chartLoading = () => (
+  <div style={{ height: 300, display: 'grid', placeItems: 'center', color: '#6b7280' }}>
+    Loading chart…
+  </div>
+);
+const WeeklyStudyChart = dynamic(
+  () => import('@/components/analytics/Charts').then((m) => m.WeeklyStudyChart),
+  { ssr: false, loading: chartLoading }
+);
+const StudyTimeBreakdownChart = dynamic(
+  () => import('@/components/analytics/Charts').then((m) => m.StudyTimeBreakdownChart),
+  { ssr: false, loading: chartLoading }
+);
+const TopicPerformanceChart = dynamic(
+  () => import('@/components/analytics/Charts').then((m) => m.TopicPerformanceChart),
+  { ssr: false, loading: chartLoading }
+);
 import {
   useAnalyticsOverview,
   useStudyTimeBreakdown,

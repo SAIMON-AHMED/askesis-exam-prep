@@ -42,23 +42,25 @@ export default function HomePage() {
   return (
     <div>
       {/* Hero Section */}
-      <div className="card fade-in" style={{ maxWidth: 640, margin: "48px auto", textAlign: "center", backgroundColor: "#ffffff" }}>
-        <span className="badge">Adaptive & Personalized</span>
-        <h1 style={{ marginTop: 12 }}>Askesis</h1>
-        <p style={{ fontSize: 16, lineHeight: 1.6 }}>
-          Calm, focused exam prep for SAT, ACT, GRE, GMAT, SHSAT, and Regents — with adaptive
-          practice, full timed exam simulations, and personalized study plans.
-        </p>
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 16, flexWrap: "wrap" }}>
-          <Link href="/exams" className="btn-primary">
-            Browse Exams
-          </Link>
-          <Link href="/register" className="btn-primary">
-            Get started
-          </Link>
-          <Link href="/login" className="btn-primary">
-            Log in
-          </Link>
+      <div style={{ padding: "0 24px" }}>
+        <div className="card fade-in" style={{ maxWidth: 640, margin: "48px auto", textAlign: "center", backgroundColor: "#ffffff" }}>
+          <span className="badge">Adaptive & Personalized</span>
+          <h1 style={{ marginTop: 12 }}>Askesis</h1>
+          <p style={{ fontSize: 16, lineHeight: 1.6 }}>
+            Calm, focused exam prep for SAT, ACT, GRE, GMAT, SHSAT, and Regents — with adaptive
+            practice, full timed exam simulations, and personalized study plans.
+          </p>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 16, flexWrap: "wrap" }}>
+            <Link href="/exams" className="btn-primary">
+              Browse Exams
+            </Link>
+            <Link href="/register" className="btn-primary">
+              Get started
+            </Link>
+            <Link href="/login" className="btn-primary">
+              Log in
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -316,52 +318,52 @@ export default function HomePage() {
 
       {/* CTA Section */}
       <div style={{
-        maxWidth: 800,
-        margin: "80px auto",
+        marginTop: 0,
         padding: "60px 24px",
         backgroundColor: "#3A6EA5",
-        borderRadius: "12px",
         textAlign: "center",
         color: "#ffffff"
       }}>
-        <h2 style={{ fontSize: 32, fontWeight: "700", marginBottom: 16 }}>
-          Ready to Ace Your Exam?
-        </h2>
-        <p style={{ fontSize: 16, marginBottom: 32, opacity: 0.95 }}>
-          Join thousands of students preparing with Askesis. Start your free trial today with 5 practice questions.
-        </p>
-        <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
-          <Link href="/register" style={{
-            padding: "12px 32px",
-            backgroundColor: "#F9C74F",
-            color: "#1f2937",
-            textDecoration: "none",
-            borderRadius: "6px",
-            fontWeight: "600",
-            border: "none",
-            cursor: "pointer",
-            fontSize: 16
-          }}>
-            Create Free Account
-          </Link>
-          <Link href="/login" style={{
-            padding: "12px 32px",
-            backgroundColor: "transparent",
-            color: "#ffffff",
-            textDecoration: "none",
-            border: "2px solid #ffffff",
-            borderRadius: "6px",
-            fontWeight: "600",
-            cursor: "pointer",
-            fontSize: 16
-          }}>
-            Sign In
-          </Link>
+        <div style={{ maxWidth: 800, margin: "0 auto" }}>
+          <h2 style={{ fontSize: 32, fontWeight: "700", marginBottom: 16 }}>
+            Ready to Ace Your Exam?
+          </h2>
+          <p style={{ fontSize: 16, marginBottom: 32, opacity: 0.95 }}>
+            Join thousands of students preparing with Askesis. Start your free trial today with 5 practice questions.
+          </p>
+          <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
+            <Link href="/register" style={{
+              padding: "12px 32px",
+              backgroundColor: "#F9C74F",
+              color: "#1f2937",
+              textDecoration: "none",
+              borderRadius: "6px",
+              fontWeight: "600",
+              border: "none",
+              cursor: "pointer",
+              fontSize: 16
+            }}>
+              Create Free Account
+            </Link>
+            <Link href="/login" style={{
+              padding: "12px 32px",
+              backgroundColor: "transparent",
+              color: "#ffffff",
+              textDecoration: "none",
+              border: "2px solid #ffffff",
+              borderRadius: "6px",
+              fontWeight: "600",
+              cursor: "pointer",
+              fontSize: 16
+            }}>
+              Sign In
+            </Link>
+          </div>
         </div>
       </div>
 
       {/* Footer Section */}
-      <div style={{ backgroundColor: "#1f2937", color: "#e5e7eb", padding: "60px 24px", marginTop: 80 }}>
+      <div style={{ backgroundColor: "#1f2937", color: "#e5e7eb", padding: "60px 24px" }}>
         <div style={{ maxWidth: 1000, margin: "0 auto" }}>
           <div style={{
             display: "grid",

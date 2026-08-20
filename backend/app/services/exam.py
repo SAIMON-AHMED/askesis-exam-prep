@@ -1,13 +1,19 @@
 """Timed exam session service: builds an exam from generated questions and scores submissions."""
+import logging
 from typing import Any
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from sqlalchemy.orm import Session
 
 from app.models.models import GeneratedQuestion, QuestionFormat, UserAttempt
 from app.services.question_generation import generate_questions
+from app.services.question_bank import select_exam_questions
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_SAT_MATH_TOPICS = ["Algebra", "Geometry", "Data Analysis", "Advanced Math"]
 RECENT_QUESTIONS_TO_AVOID = 30
+MAX_WORKERS = 5  # Parallel question generation limit
 
 
 def _recent_seen_question_texts(db: Session, user_id: str, exam_type: str, topic: str) -> list[str]:
@@ -40,13 +46,37 @@ def _estimate_scaled_score(raw_score: int, total_questions: int) -> tuple[int, i
 def build_exam_questions(
     db: Session, exam_type: str, topics: list[str], number_of_questions: int, user_id: str | None = None
 ) -> list[GeneratedQuestion]:
-    """Generates and persists a fresh set of questions spread across topics/difficulties for an exam."""
+    """Assemble an exam from the pre-seeded question bank, with no model calls.
+
+    Mock tests must start instantly, so this is a plain database read. Live generation is
+    only used if the bank has nothing stored for this exam yet.
+    """
     topic_list = topics or DEFAULT_SAT_MATH_TOPICS
+
+    selected = select_exam_questions(db, exam_type, topic_list, number_of_questions, user_id)
+    if selected:
+        return selected
+
+    logger.warning(
+        "Question bank empty for %s; falling back to live generation. "
+        "Run `python -m app.services.question_bank` to seed.",
+        exam_type,
+    )
+    return _generate_exam_questions(db, exam_type, topic_list, number_of_questions, user_id)
+
+
+def _generate_exam_questions(
+    db: Session, exam_type: str, topics: list[str], number_of_questions: int, user_id: str | None = None
+) -> list[GeneratedQuestion]:
+    """Fallback path: generate questions with the model, in parallel across topics."""
+    topic_list = topics
     questions: list[GeneratedQuestion] = []
 
     per_topic = max(1, number_of_questions // len(topic_list))
     remaining = number_of_questions
 
+    # Build list of topic generation tasks
+    tasks = []
     for i, topic in enumerate(topic_list):
         count = per_topic if i < len(topic_list) - 1 else remaining
         count = min(count, remaining)
@@ -56,22 +86,44 @@ def build_exam_questions(
         avoid_questions = (
             _recent_seen_question_texts(db, user_id, exam_type, topic) if user_id else None
         )
-        try:
-            raw_items = generate_questions(
-                exam_type=exam_type,
-                topic=topic,
-                difficulty=difficulty,
-                question_format=QuestionFormat.multiple_choice.value,
-                number_of_questions=count,
-                avoid_questions=avoid_questions,
-            )
-        except ValueError:
-            continue
+        tasks.append((exam_type, topic, difficulty, count, avoid_questions))
+        remaining -= count
 
+    # Generate questions in parallel
+    results = []
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = {
+            executor.submit(
+                generate_questions,
+                exam_type=task[0],
+                topic=task[1],
+                difficulty=task[2],
+                question_format=QuestionFormat.multiple_choice.value,
+                number_of_questions=task[3],
+                avoid_questions=task[4],
+            ): task[1]  # task[1] is topic name
+            for task in tasks
+        }
+
+        for future in as_completed(futures):
+            topic_name = futures[future]
+            try:
+                raw_items = future.result()
+                results.append((topic_name, raw_items))
+            except ValueError:
+                # Topic failed to generate questions, skip it
+                continue
+
+    # Persist results to database
+    for topic_name, raw_items in results:
         for item in raw_items:
+            # Find the difficulty level for this topic
+            topic_idx = next((i for i, t in enumerate(topic_list) if t == topic_name), 0)
+            difficulty = 2 + (topic_idx % 3)
+
             q = GeneratedQuestion(
                 exam_type=exam_type,
-                topic=topic,
+                topic=topic_name,
                 difficulty=difficulty,
                 question_format=QuestionFormat.multiple_choice,
                 question_text=item["question_text"],
@@ -83,7 +135,6 @@ def build_exam_questions(
             )
             db.add(q)
             questions.append(q)
-        remaining -= len(raw_items)
 
     db.flush()
     for q in questions:

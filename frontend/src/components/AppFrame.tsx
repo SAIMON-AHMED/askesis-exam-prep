@@ -1,11 +1,15 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import Navbar from './Navbar';
 import { useAssistant, ASSISTANT_PANEL_WIDTH } from '@/context/AssistantContext';
 
 export default function AppFrame({ children }: { children: ReactNode }) {
   const { isOpen } = useAssistant();
+  const pathname = usePathname();
+  // The landing page lays out its own full-bleed bands, so it opts out of the centred container.
+  const isFullBleed = pathname === '/';
 
   return (
     <div
@@ -15,7 +19,7 @@ export default function AppFrame({ children }: { children: ReactNode }) {
       }}
     >
       <Navbar />
-      <main className="container">{children}</main>
+      <main className={isFullBleed ? undefined : 'container'}>{children}</main>
     </div>
   );
 }

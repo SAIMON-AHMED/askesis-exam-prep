@@ -625,6 +625,24 @@ export default function LearnPage() {
                                 >
                                   {question.question}
                                 </h4>
+                                {question.passage && (
+                                  <blockquote
+                                    style={{
+                                      margin: '12px 0 0 0',
+                                      padding: '12px 16px',
+                                      borderLeft: '4px solid #3A6EA5',
+                                      background: '#f8fafc',
+                                      borderRadius: '6px',
+                                      fontSize: '14px',
+                                      fontWeight: '400',
+                                      color: '#374151',
+                                      lineHeight: '1.7',
+                                      whiteSpace: 'pre-wrap',
+                                    }}
+                                  >
+                                    {question.passage}
+                                  </blockquote>
+                                )}
                               </div>
 
                               {/* Answer Options (Multiple Choice) or Text Area (Essay) */}

@@ -7,17 +7,19 @@ import { api } from "@/lib/api";
 import { useExam } from "@/context/ExamContext";
 import { getCurriculumByExamId } from "@/lib/curriculumData";
 import { getExam, EXAMS } from "@/lib/examConstants";
-import { getQuestionsByTopic } from "@/lib/practiceQuestionsData";
 import { useExamAccess } from "@/hooks/useExamAccess";
 import VisualAid, { VisualAidData } from "@/components/VisualAid";
 
 interface GeneratedQuestion {
   id: string;
   question_text: string;
+  passage?: string | null;
   options: Record<string, string> | null;
   correct_answer: string;
   explanation: string;
   visual_aid?: VisualAidData | null;
+  topic?: string;
+  topicIndex?: number;
 }
 
 interface Quota {
@@ -32,8 +34,6 @@ interface PracticeSession {
   topics: string[];
   topicIds: string[];
   currentTopicIndex: number;
-  questions: GeneratedQuestion[];
-  currentQuestionIndex: number;
   completedQuestions: string[];
   correctCount: number;
   wrongCount: number;
@@ -42,31 +42,52 @@ interface PracticeSession {
 
 const OPTION_LETTERS = ["A", "B", "C", "D", "E", "F"];
 
-/** Pick a question from the built-in bank when live generation is unavailable. */
-function getLocalQuestion(
+// A small first batch reaches the student fastest; the buffer is then topped up in the
+// background so later questions are served from memory with no visible wait.
+const FIRST_BATCH_SIZE = 3;
+const REFILL_SIZE = 5;
+/** Start refilling while this many questions are still queued, so the fetch overlaps reading. */
+const LOW_WATER_MARK = 4;
+/** Caps how far ahead we generate, so a student who quits early hasn't burned tokens. */
+const MAX_BUFFER = 12;
+
+/**
+ * Build a batch from the offline question bank when live generation is unavailable.
+ * The bank is imported dynamically because it is ~1 MB and most sessions never need it.
+ */
+async function getLocalQuestions(
   examId: string,
   topicId: string,
-  completedIds: string[]
-): GeneratedQuestion | null {
+  completedIds: string[],
+  count: number
+): Promise<GeneratedQuestion[]> {
+  const { getQuestionsByTopic } = await import("@/lib/practiceQuestionsData");
   const bank = getQuestionsByTopic(examId, topicId).filter(
     (q) => !q.isEssay && q.options && q.options.length > 0
   );
-  if (bank.length === 0) return null;
-  const remaining = bank.filter((q) => !completedIds.includes(`local-${q.id}`));
-  const pool = remaining.length > 0 ? remaining : bank;
-  const picked = pool[Math.floor(Math.random() * pool.length)];
-  const options: Record<string, string> = {};
-  picked.options!.forEach((opt, i) => {
-    options[OPTION_LETTERS[i]] = opt;
-  });
-  return {
-    id: `local-${picked.id}`,
-    question_text: picked.question,
-    options,
-    correct_answer: OPTION_LETTERS[picked.correctAnswer ?? 0],
-    explanation: picked.explanation,
-    visual_aid: null,
-  };
+  if (bank.length === 0) return [];
+
+  const unseen = bank.filter((q) => !completedIds.includes(`local-${q.id}`));
+  const pool = [...(unseen.length > 0 ? unseen : bank)];
+  const picked: GeneratedQuestion[] = [];
+
+  while (picked.length < count && pool.length > 0) {
+    const [q] = pool.splice(Math.floor(Math.random() * pool.length), 1);
+    const options: Record<string, string> = {};
+    q.options!.forEach((opt, i) => {
+      options[OPTION_LETTERS[i]] = opt;
+    });
+    picked.push({
+      id: `local-${q.id}`,
+      question_text: q.question,
+      passage: q.passage ?? null,
+      options,
+      correct_answer: OPTION_LETTERS[q.correctAnswer ?? 0],
+      explanation: q.explanation,
+      visual_aid: null,
+    });
+  }
+  return picked;
 }
 
 function formatElapsed(seconds: number) {
@@ -92,6 +113,7 @@ export default function PracticePage() {
   const curriculum = getCurriculumByExamId(currentExamId);
 
   const [difficulty, setDifficulty] = useState(2);
+  const [selectedTopicId, setSelectedTopicId] = useState<string>("");
   const [questions, setQuestions] = useState<GeneratedQuestion[]>([]);
   const [answer, setAnswer] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -106,6 +128,22 @@ export default function PracticePage() {
   const [elapsed, setElapsed] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Questions already generated and waiting to be shown. Ref is the source of truth so the
+  // background refill never reads stale state; bufferCount mirrors it for rendering.
+  const queueRef = useRef<GeneratedQuestion[]>([]);
+  const [bufferCount, setBufferCount] = useState(0);
+  const refillingRef = useRef(false);
+  /** Next topic to generate from; advances ahead of the topic the student is currently on. */
+  const prefetchCursorRef = useRef(0);
+  const [exhausted, setExhausted] = useState(false);
+
+  const syncBuffer = () => setBufferCount(queueRef.current.length);
+
+  const selectedTopicName =
+    curriculum.sections
+      .flatMap((s) => s.topics)
+      .find((t) => t.id === selectedTopicId)?.name ?? "";
 
   function loadQuota() {
     api
@@ -133,70 +171,130 @@ export default function PracticePage() {
     };
   }, [sessionActive, session?.sessionStartTime]);
 
-  const startPracticeSession = () => {
+  const startPracticeSession = async () => {
     const allTopics = curriculum.sections.flatMap((s) => s.topics);
+    const chosen = allTopics.filter((t) => !selectedTopicId || t.id === selectedTopicId);
+    const sessionTopics = chosen.length > 0 ? chosen : allTopics;
     const newSession: PracticeSession = {
       examId: currentExamId,
-      topics: allTopics.map((t) => t.name),
-      topicIds: allTopics.map((t) => t.id),
+      topics: sessionTopics.map((t) => t.name),
+      topicIds: sessionTopics.map((t) => t.id),
       currentTopicIndex: 0,
-      questions: [],
-      currentQuestionIndex: 0,
       completedQuestions: [],
       correctCount: 0,
       wrongCount: 0,
       sessionStartTime: Date.now(),
     };
+
+    queueRef.current = [];
+    prefetchCursorRef.current = 0;
+    refillingRef.current = false;
+    syncBuffer();
+    setExhausted(false);
     setSession(newSession);
     setSessionActive(true);
     setElapsed(0);
-    fetchNextQuestion(newSession);
-  };
-
-  const fetchNextQuestion = async (currentSession: PracticeSession) => {
-    setLoading(true);
     setFeedback(null);
     setError(null);
-    
+
+    setLoading(true);
+    const first = await fetchBatch(newSession, FIRST_BATCH_SIZE);
+    setLoading(false);
+
+    if (first.length === 0) {
+      setError("Failed to load questions. Please try again.");
+      return;
+    }
+
+    const [head, ...rest] = first;
+    queueRef.current = rest;
+    syncBuffer();
+    showQuestion(head, newSession);
+    void ensureBuffer(newSession);
+  };
+
+  /**
+   * Generate one batch for the next unused topic. Falls back to the offline bank so a
+   * background refill failure is never surfaced to the student mid-session.
+   */
+  const fetchBatch = async (
+    currentSession: PracticeSession,
+    count: number
+  ): Promise<GeneratedQuestion[]> => {
+    // A single-topic session keeps drawing from that topic instead of running out.
+    const singleTopic = currentSession.topics.length <= 1;
+    const topicIndex = singleTopic
+      ? 0
+      : Math.min(prefetchCursorRef.current, currentSession.topics.length - 1);
+    const topicName = currentSession.topics[topicIndex] || "Algebra";
+    if (!singleTopic) prefetchCursorRef.current = topicIndex + 1;
+
+    const tag = (items: GeneratedQuestion[]) =>
+      items.map((q) => ({ ...q, topic: topicName, topicIndex }));
+
     try {
-      const currentTopic = currentSession.topics[currentSession.currentTopicIndex] || "Algebra";
-      
-      // Use unlimited endpoint for premium users, regular for free users
       const endpoint = quota?.is_premium ? "/questions/unlimited/next" : "/questions/generate";
-      const payload = {
+      const res = await api.post(endpoint, {
         exam_type: currentExam?.displayName || "SAT",
-        topic: currentTopic,
+        topic: topicName,
         difficulty,
         question_format: "multiple_choice",
-        number_of_questions: 1,
-      };
-      
-      const res = await api.post(endpoint, payload);
-      setQuestions(res.data instanceof Array ? res.data : [res.data]);
-      setAnswer("");
-      setStartTime(Date.now());
+        number_of_questions: count,
+      });
+      return tag(res.data instanceof Array ? res.data : [res.data]);
     } catch (err: any) {
       if (err?.response?.status === 403) {
         setLimitReached(true);
-        setError(err.response.data?.detail || "Daily free practice limit reached. Upgrade to unlimited.");
-        return;
+        setError(
+          err.response.data?.detail || "Daily free practice limit reached. Upgrade to unlimited."
+        );
+        return [];
       }
-      // Live generation unavailable — fall back to the built-in question bank.
-      const topicId = currentSession.topicIds[currentSession.currentTopicIndex];
-      const localQuestion = getLocalQuestion(
-        currentSession.examId,
-        topicId,
-        currentSession.completedQuestions
+      const served = [...currentSession.completedQuestions, ...queueRef.current.map((q) => q.id)];
+      return tag(
+        await getLocalQuestions(
+          currentSession.examId,
+          currentSession.topicIds[topicIndex],
+          served,
+          count
+        )
       );
-      if (localQuestion) {
-        setQuestions([localQuestion]);
-        setAnswer("");
-        setStartTime(Date.now());
-      } else {
-        setError("Failed to load a question. Please try again.");
+    }
+  };
+
+  /** Top up the queue in the background. Single-flight so rapid advances can't stack fetches. */
+  const ensureBuffer = async (currentSession: PracticeSession) => {
+    if (refillingRef.current || limitReached) return;
+    if (queueRef.current.length > LOW_WATER_MARK) return;
+    if (prefetchCursorRef.current >= currentSession.topics.length) {
+      setExhausted(true);
+      return;
+    }
+
+    refillingRef.current = true;
+    try {
+      while (
+        queueRef.current.length < MAX_BUFFER &&
+        prefetchCursorRef.current < currentSession.topics.length
+      ) {
+        const batch = await fetchBatch(currentSession, REFILL_SIZE);
+        if (batch.length === 0) break;
+        queueRef.current = [...queueRef.current, ...batch];
+        syncBuffer();
       }
+      if (prefetchCursorRef.current >= currentSession.topics.length) setExhausted(true);
     } finally {
-      setLoading(false);
+      refillingRef.current = false;
+    }
+  };
+
+  const showQuestion = (q: GeneratedQuestion, currentSession: PracticeSession) => {
+    setQuestions([q]);
+    setAnswer("");
+    setFeedback(null);
+    setStartTime(Date.now());
+    if (q.topicIndex !== undefined && q.topicIndex !== currentSession.currentTopicIndex) {
+      setSession({ ...currentSession, currentTopicIndex: q.topicIndex });
     }
   };
 
@@ -221,7 +319,7 @@ export default function PracticePage() {
           submitted_answer: answer,
           time_taken_seconds: timeTaken,
           difficulty,
-          topic: session.topics[session.currentTopicIndex] || "Algebra",
+          topic: q.topic || session.topics[session.currentTopicIndex] || "Algebra",
         });
         isCorrect = res.data.is_correct;
         explanationText = res.data.explanation;
@@ -249,15 +347,35 @@ export default function PracticePage() {
 
   const continueToNextQuestion = async () => {
     if (!session) return;
-    
-    // Move to next topic if needed
-    let nextSession = { ...session };
-    if (nextSession.currentTopicIndex < nextSession.topics.length - 1) {
-      nextSession.currentTopicIndex += 1;
+
+    const next = queueRef.current.shift();
+    syncBuffer();
+
+    if (next) {
+      showQuestion(next, session);
+      void ensureBuffer(session);
+      return;
     }
-    
-    setSession(nextSession);
-    await fetchNextQuestion(nextSession);
+
+    // Buffer ran dry (slow network or a very fast student) — wait for one batch.
+    if (prefetchCursorRef.current >= session.topics.length) {
+      setExhausted(true);
+      return;
+    }
+
+    setLoading(true);
+    const batch = await fetchBatch(session, REFILL_SIZE);
+    setLoading(false);
+
+    if (batch.length === 0) {
+      setExhausted(true);
+      return;
+    }
+    const [head, ...rest] = batch;
+    queueRef.current = rest;
+    syncBuffer();
+    showQuestion(head, session);
+    void ensureBuffer(session);
   };
 
   const quitSession = () => {
@@ -267,9 +385,14 @@ export default function PracticePage() {
     setAnswer("");
     setFeedback(null);
     setElapsed(0);
+    queueRef.current = [];
+    prefetchCursorRef.current = 0;
+    refillingRef.current = false;
+    syncBuffer();
+    setExhausted(false);
   };
 
-  const isSessionComplete = session && session.currentTopicIndex >= session.topics.length - 1;
+  const isSessionComplete = Boolean(session) && exhausted && bufferCount === 0;
   const question = questions[0];
   const showHud = sessionActive;
 
@@ -293,7 +416,10 @@ export default function PracticePage() {
           <select
             id="practice-exam"
             value={selectedExamId}
-            onChange={(e) => setSelectedExamId(e.target.value)}
+            onChange={(e) => {
+              setSelectedExamId(e.target.value);
+              setSelectedTopicId("");
+            }}
             style={{ marginBottom: "24px" }}
           >
             <option value="">Choose an exam...</option>
@@ -318,6 +444,30 @@ export default function PracticePage() {
           {selectedExamId && (
             <>
               <label
+                htmlFor="practice-topic"
+                style={{ marginBottom: "8px", display: "block", fontWeight: "500" }}
+              >
+                Select Topic
+              </label>
+              <select
+                id="practice-topic"
+                value={selectedTopicId}
+                onChange={(e) => setSelectedTopicId(e.target.value)}
+                style={{ marginBottom: "24px" }}
+              >
+                <option value="">All topics ({curriculum.totalTopics})</option>
+                {curriculum.sections.map((section) => (
+                  <optgroup key={section.id} label={section.name}>
+                    {section.topics.map((topic) => (
+                      <option key={topic.id} value={topic.id}>
+                        {topic.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+
+              <label
                 htmlFor="practice-difficulty"
                 style={{ marginBottom: "8px", display: "block", fontWeight: "500" }}
               >
@@ -337,8 +487,17 @@ export default function PracticePage() {
               </select>
 
               <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px" }}>
-                You'll practice through all {curriculum.sections.length} sections (
-                {curriculum.totalTopics} topics) at your chosen difficulty level.
+                {selectedTopicId ? (
+                  <>
+                    You'll keep practicing <strong>{selectedTopicName}</strong> at your chosen
+                    difficulty until you quit.
+                  </>
+                ) : (
+                  <>
+                    You'll practice through all {curriculum.sections.length} sections (
+                    {curriculum.totalTopics} topics) at your chosen difficulty level.
+                  </>
+                )}
               </p>
 
               <button
@@ -393,6 +552,15 @@ export default function PracticePage() {
           <span className="badge" style={{ background: "var(--color-error-bg)", color: "#8c1c26" }}>
             ✗ {session?.wrongCount || 0}
           </span>
+          {bufferCount > 0 && (
+            <span
+              className="badge"
+              title={`${bufferCount} question${bufferCount === 1 ? "" : "s"} ready to go`}
+              style={{ background: "#eef2ff", color: "#3730a3" }}
+            >
+              ⚡ {bufferCount} ready
+            </span>
+          )}
           <button
             className="btn-secondary btn-sm"
             onClick={quitSession}
@@ -406,7 +574,9 @@ export default function PracticePage() {
       <h1>Practice Session</h1>
       {session && (
         <p style={{ color: "#6b7280", marginBottom: "24px" }}>
-          Topic {session.currentTopicIndex + 1} of {session.topics.length}:{" "}
+          {session.topics.length > 1 && (
+            <>Topic {session.currentTopicIndex + 1} of {session.topics.length}: </>
+          )}
           <strong>{session.topics[session.currentTopicIndex]}</strong>
         </p>
       )}
@@ -429,6 +599,22 @@ export default function PracticePage() {
             </span>
             <span className="badge">Difficulty {difficulty}</span>
           </div>
+          {question.passage && (
+            <blockquote
+              style={{
+                marginTop: 12,
+                padding: "12px 16px",
+                borderLeft: "4px solid var(--color-primary, #3A6EA5)",
+                background: "#f8fafc",
+                borderRadius: 6,
+                color: "var(--color-text)",
+                lineHeight: 1.6,
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {question.passage}
+            </blockquote>
+          )}
           <p style={{ fontSize: "1.05rem", color: "var(--color-text)", marginTop: 12 }}>
             {question.question_text}
           </p>

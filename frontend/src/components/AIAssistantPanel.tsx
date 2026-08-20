@@ -2,7 +2,14 @@
 
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useAssistant, ASSISTANT_PANEL_WIDTH } from "@/context/AssistantContext";
+
+// Deferred so KaTeX/markdown are fetched only once a reply is actually shown.
+const MarkdownMessage = dynamic(() => import("@/components/common/MarkdownMessage"), {
+  ssr: false,
+  loading: () => null,
+});
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -116,7 +123,8 @@ export default function AIAssistantPanel() {
           position: "fixed",
           top: 0,
           right: isOpen ? 0 : `-${ASSISTANT_PANEL_WIDTH + 20}px`,
-          width: `${ASSISTANT_PANEL_WIDTH}px`,
+          width: `min(${ASSISTANT_PANEL_WIDTH}px, 100vw)`,
+          maxWidth: "100vw",
           height: "100vh",
           backgroundColor: "#ffffff",
           boxShadow: "-4px 0 16px rgba(0,0,0,0.12)",
@@ -182,13 +190,21 @@ export default function AIAssistantPanel() {
                   borderRadius: "12px",
                   fontSize: "14px",
                   lineHeight: "1.5",
-                  whiteSpace: "pre-wrap",
                   backgroundColor: msg.role === "user" ? "#3A6EA5" : "#ffffff",
                   color: msg.role === "user" ? "#ffffff" : "#1a1a1a",
                   border: msg.role === "assistant" ? "1px solid #e5e7eb" : "none",
+                  minWidth: 0,
+                  overflowX: "auto",
+                  overflowWrap: "anywhere",
                 }}
               >
-                {msg.content}
+                {msg.role === "user" ? (
+                  <pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", margin: 0, fontFamily: "inherit" }}>
+                    {msg.content}
+                  </pre>
+                ) : (
+                  <MarkdownMessage content={msg.content} />
+                )}
               </div>
             </div>
           ))}

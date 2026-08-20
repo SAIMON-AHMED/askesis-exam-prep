@@ -18,7 +18,10 @@
     "next": "^16.3.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "recharts": "^2.15.4"
+    "react-markdown": "^10.1.0",
+    "recharts": "^2.15.4",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",

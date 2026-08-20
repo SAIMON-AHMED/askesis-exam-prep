@@ -182,8 +182,9 @@ function ExamPageInner() {
         <h1>{pageTitle}</h1>
         {mockNumber && (
           <p style={{ color: "#6b7280", marginBottom: 16 }}>
-            Exam-style test across the full {examType} curriculum. Fresh questions are generated
-            for every attempt — you'll get a scored topic breakdown at the end.
+            Exam-style test across the full {examType} curriculum. Questions are drawn from our
+            reviewed question bank and reshuffled for every attempt — you'll get a scored topic
+            breakdown at the end.
           </p>
         )}
         <div className="card">
