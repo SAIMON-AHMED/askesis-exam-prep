@@ -130,6 +130,44 @@ def test_seeding_is_idempotent(db, monkeypatch):
     assert question_bank.bank_question_count(db, "SAT") == 1
 
 
+def test_concurrent_workers_do_not_double_seed(db, monkeypatch):
+    """Several web workers boot at once; only one may insert.
+
+    Regression: on the first production deploy all 4 workers seeded simultaneously
+    because each saw an empty table, inserting the bank four times over.
+    """
+    sample = [
+        {
+            "exam_type": "SAT",
+            "topic": "Algebra",
+            "difficulty": 3,
+            "question_text": f"Question {i}",
+            "options": {"A": "1", "B": "2", "C": "3", "D": "4"},
+            "correct_answer": "A",
+            "explanation": "A sufficiently long explanation for validation.",
+            "source_id": f"q-{i}",
+        }
+        for i in range(10)
+    ]
+    monkeypatch.setattr(question_bank, "load_bank", lambda: sample)
+
+    lock_held = {"value": False}
+
+    def try_lock(_db):
+        if lock_held["value"]:
+            return False
+        lock_held["value"] = True
+        return True
+
+    monkeypatch.setattr(question_bank, "_try_acquire_seed_lock", try_lock)
+    monkeypatch.setattr(question_bank, "_release_seed_lock", lambda _db: None)
+
+    results = [question_bank.seed_question_bank(db) for _ in range(4)]
+
+    assert sum(r["inserted"] for r in results) == 10
+    assert question_bank.bank_question_count(db, "SAT") == 10
+
+
 def test_exported_bank_file_is_valid():
     """The shipped JSON must be loadable and internally consistent."""
     items = question_bank.load_bank()

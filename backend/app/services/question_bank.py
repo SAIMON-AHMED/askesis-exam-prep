@@ -10,6 +10,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.models.models import GeneratedQuestion, QuestionFormat, UserAttempt
@@ -37,44 +38,107 @@ def bank_question_count(db: Session, exam_type: str | None = None) -> int:
     return query.count()
 
 
+# Arbitrary fixed key identifying the seeding lock.
+_SEED_LOCK_KEY = 815246137
+
+
+def _is_postgres(db: Session) -> bool:
+    return db.bind.dialect.name == "postgresql"
+
+
+def _try_acquire_seed_lock(db: Session) -> bool:
+    """Only one process may seed. Web servers run several workers that all boot at once."""
+    if not _is_postgres(db):
+        return True
+    return bool(db.execute(text("SELECT pg_try_advisory_lock(:k)"), {"k": _SEED_LOCK_KEY}).scalar())
+
+
+def _release_seed_lock(db: Session) -> None:
+    if _is_postgres(db):
+        db.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": _SEED_LOCK_KEY})
+        db.commit()
+
+
+def remove_duplicate_questions(db: Session) -> int:
+    """Drop repeated bank rows, keeping the earliest and never touching attempted questions."""
+    if not _is_postgres(db):
+        return 0
+
+    deleted = db.execute(
+        text(
+            """
+            DELETE FROM generated_questions
+            WHERE id IN (
+                SELECT id FROM (
+                    SELECT id, row_number() OVER (
+                        PARTITION BY exam_type, topic, question_text
+                        ORDER BY created_at, id
+                    ) AS rn
+                    FROM generated_questions
+                ) ranked
+                WHERE ranked.rn > 1
+            )
+            AND id NOT IN (
+                SELECT generated_question_id FROM user_attempts
+                WHERE generated_question_id IS NOT NULL
+            )
+            """
+        )
+    ).rowcount
+    db.commit()
+    if deleted:
+        logger.info("Removed %d duplicate question rows", deleted)
+    return deleted
+
+
 def seed_question_bank(db: Session) -> dict[str, int]:
     """Insert any bank questions that are not already stored. Safe to run repeatedly."""
     items = load_bank()
     if not items:
         return {"available": 0, "inserted": 0, "skipped": 0}
 
-    existing = {
-        (row.exam_type, row.topic, row.question_text)
-        for row in db.query(
-            GeneratedQuestion.exam_type,
-            GeneratedQuestion.topic,
-            GeneratedQuestion.question_text,
-        ).all()
-    }
+    if not _try_acquire_seed_lock(db):
+        logger.info("Question bank seeding already running in another worker; skipping")
+        return {"available": len(items), "inserted": 0, "skipped": len(items)}
 
-    inserted = 0
-    for item in items:
-        key = (item["exam_type"], item["topic"], item["question_text"])
-        if key in existing:
-            continue
-        db.add(
-            GeneratedQuestion(
-                exam_type=item["exam_type"],
-                topic=item["topic"],
-                difficulty=item["difficulty"],
-                question_format=QuestionFormat.multiple_choice,
-                question_text=item["question_text"],
-                options=item["options"],
-                correct_answer=item["correct_answer"],
-                explanation=item["explanation"],
-                validated=True,
-                generation_metadata={"source": BANK_SOURCE, "source_id": item["source_id"]},
+    try:
+        remove_duplicate_questions(db)
+
+        existing = {
+            (row.exam_type, row.topic, row.question_text)
+            for row in db.query(
+                GeneratedQuestion.exam_type,
+                GeneratedQuestion.topic,
+                GeneratedQuestion.question_text,
+            ).all()
+        }
+
+        inserted = 0
+        for item in items:
+            key = (item["exam_type"], item["topic"], item["question_text"])
+            if key in existing:
+                continue
+            db.add(
+                GeneratedQuestion(
+                    exam_type=item["exam_type"],
+                    topic=item["topic"],
+                    difficulty=item["difficulty"],
+                    question_format=QuestionFormat.multiple_choice,
+                    question_text=item["question_text"],
+                    options=item["options"],
+                    correct_answer=item["correct_answer"],
+                    explanation=item["explanation"],
+                    validated=True,
+                    generation_metadata={"source": BANK_SOURCE, "source_id": item["source_id"]},
+                )
             )
-        )
-        existing.add(key)
-        inserted += 1
+            existing.add(key)
+            inserted += 1
 
-    db.commit()
+        db.commit()
+    finally:
+        _release_seed_lock(db)
+
     result = {"available": len(items), "inserted": inserted, "skipped": len(items) - inserted}
     logger.info("Question bank seed: %s", result)
     return result
