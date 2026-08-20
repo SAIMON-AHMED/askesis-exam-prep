@@ -5,7 +5,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.models.models import Base, GeneratedQuestion, User
+from app.models.models import Base, GeneratedQuestion, User, UserAttempt
 from app.services import exam as exam_service
 from app.services import question_bank
 
@@ -179,3 +179,114 @@ def test_exported_bank_file_is_valid():
         assert item["question_text"].strip()
         assert item["explanation"].strip()
         assert 1 <= item["difficulty"] <= 5
+
+
+def test_every_exam_has_practice_questions_ready():
+    """Every non-essay curriculum topic must be servable without calling a model."""
+    by_exam: dict[str, set[str]] = {}
+    for item in question_bank.load_bank():
+        by_exam.setdefault(item["exam_type"], set()).add(item["topic"])
+
+    assert set(by_exam) == {"SAT", "ACT", "GRE", "GMAT", "SHSAT", "Regents"}
+    for exam, topics in by_exam.items():
+        assert len(topics) >= 6, f"{exam} only has {len(topics)} topics in the bank"
+
+
+def _seed_practice(db, topic="Algebra", n=10, difficulty=3):
+    for i in range(n):
+        db.add(
+            GeneratedQuestion(
+                exam_type="SAT",
+                topic=topic,
+                difficulty=difficulty,
+                question_format="multiple_choice",
+                question_text=f"{topic} practice {i}",
+                options={"A": "1", "B": "2", "C": "3", "D": "4"},
+                correct_answer="A",
+                explanation="A sufficiently long explanation for validation.",
+                validated=True,
+            )
+        )
+    db.commit()
+
+
+def test_practice_is_served_from_the_bank(db):
+    _seed_practice(db)
+    picked = question_bank.select_practice_questions(
+        db, exam_type="SAT", topic="Algebra", difficulty=3, count=5
+    )
+    assert len(picked) == 5
+    assert len({q.id for q in picked}) == 5
+
+
+def test_practice_skips_questions_the_student_already_answered(db):
+    _seed_practice(db, n=4)
+    user = User(email="s@example.com", hashed_password="x")
+    db.add(user)
+    db.commit()
+
+    first = question_bank.select_practice_questions(
+        db, exam_type="SAT", topic="Algebra", difficulty=3, count=2, user_id=user.id
+    )
+    for q in first:
+        db.add(
+            UserAttempt(
+                user_id=user.id,
+                generated_question_id=q.id,
+                submitted_answer="A",
+                is_correct=True,
+                time_taken_seconds=5.0,
+                difficulty=3,
+                topic="Algebra",
+            )
+        )
+    db.commit()
+
+    second = question_bank.select_practice_questions(
+        db, exam_type="SAT", topic="Algebra", difficulty=3, count=4, user_id=user.id
+    )
+    assert {q.id for q in first}.isdisjoint({q.id for q in second})
+
+
+def test_practice_falls_back_to_generation_once_topic_is_exhausted(db):
+    _seed_practice(db, n=2)
+    user = User(email="done@example.com", hashed_password="x")
+    db.add(user)
+    db.commit()
+
+    everything = question_bank.select_practice_questions(
+        db, exam_type="SAT", topic="Algebra", difficulty=3, count=10, user_id=user.id
+    )
+    for q in everything:
+        db.add(
+            UserAttempt(
+                user_id=user.id,
+                generated_question_id=q.id,
+                submitted_answer="A",
+                is_correct=True,
+                time_taken_seconds=5.0,
+                difficulty=3,
+                topic="Algebra",
+            )
+        )
+    db.commit()
+
+    # Empty result signals the endpoint to generate genuinely new questions.
+    assert (
+        question_bank.select_practice_questions(
+            db, exam_type="SAT", topic="Algebra", difficulty=3, count=5, user_id=user.id
+        )
+        == []
+    )
+
+
+def test_practice_uses_nearest_difficulty_when_exact_level_is_absent(db):
+    """The bank only spans 2-4, so a level 5 request must still return something."""
+    _seed_practice(db, n=3, difficulty=4)
+    _seed_practice(db, topic="Algebra", n=3, difficulty=2)
+
+    picked = question_bank.select_practice_questions(
+        db, exam_type="SAT", topic="Algebra", difficulty=5, count=3
+    )
+    assert len(picked) == 3
+    assert all(q.difficulty == 4 for q in picked), [q.difficulty for q in picked]

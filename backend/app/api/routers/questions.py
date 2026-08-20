@@ -9,6 +9,7 @@ from app.db.session import get_db
 from app.models.models import GeneratedQuestion, User, UserAttempt
 from app.schemas.schemas import GeneratedQuestionOut, QuestionGenerateRequest
 from app.services.question_generation import generate_questions
+from app.services.question_bank import select_practice_questions
 from app.services.subscription import (
     FREE_DAILY_PRACTICE_LIMIT,
     get_practice_quota,
@@ -55,6 +56,18 @@ def generate(
                 "Buy this exam or upgrade to a subscription for unlimited practice."
             ),
         )
+
+    # Serve pre-seeded questions first; generation is only needed once these run out.
+    from_bank = select_practice_questions(
+        db,
+        exam_type=payload.exam_type,
+        topic=payload.topic,
+        difficulty=payload.difficulty,
+        count=payload.number_of_questions,
+        user_id=current_user.id,
+    )
+    if from_bank:
+        return from_bank
 
     try:
         avoid_questions = _recent_seen_question_texts(
@@ -136,6 +149,18 @@ def get_unlimited_question(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Unlimited questions require Pro/Premium subscription or exam purchase",
         )
+
+    # Serve pre-seeded questions first; generation is only needed once these run out.
+    from_bank = select_practice_questions(
+        db,
+        exam_type=payload.exam_type,
+        topic=payload.topic,
+        difficulty=payload.difficulty,
+        count=1,
+        user_id=current_user.id,
+    )
+    if from_bank:
+        return from_bank[0]
 
     try:
         avoid_questions = _recent_seen_question_texts(

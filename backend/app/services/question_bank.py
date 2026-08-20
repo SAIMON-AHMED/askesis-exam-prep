@@ -202,6 +202,39 @@ def select_exam_questions(
     return selected
 
 
+def select_practice_questions(
+    db: Session,
+    exam_type: str,
+    topic: str,
+    difficulty: int,
+    count: int,
+    user_id: str | None = None,
+) -> list[GeneratedQuestion]:
+    """Pick stored questions for a practice session, closest to the requested difficulty.
+
+    Returns an empty list once the student has seen everything stored for this topic, so
+    the caller can fall back to generating genuinely new material.
+    """
+    pool = (
+        db.query(GeneratedQuestion)
+        .filter(GeneratedQuestion.exam_type == exam_type, GeneratedQuestion.topic == topic)
+        .all()
+    )
+    if not pool:
+        return []
+
+    if user_id:
+        seen = _seen_question_ids(db, user_id, exam_type)
+        pool = [q for q in pool if q.id not in seen]
+        if not pool:
+            return []
+
+    # The bank only spans difficulty 2-4, so fall back to the nearest available level.
+    random.shuffle(pool)
+    pool.sort(key=lambda q: abs(q.difficulty - difficulty))
+    return pool[:count]
+
+
 def main() -> None:
     """CLI entry point: python -m app.services.question_bank"""
     logging.basicConfig(level=logging.INFO)
