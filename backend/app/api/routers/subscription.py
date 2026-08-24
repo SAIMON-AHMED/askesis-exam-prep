@@ -163,6 +163,7 @@ def create_subscription(
         plan = SUBSCRIPTION_PLANS[payload.plan_name]
         checkout_session = stripe.checkout.Session.create(
             mode="subscription",
+            payment_method_collection="always",
             line_items=[
                 {
                     "price_data": {
@@ -176,6 +177,9 @@ def create_subscription(
             ],
             subscription_data={
                 "trial_period_days": plan["trial_period_days"],
+                "trial_settings": {
+                    "end_behavior": {"missing_payment_method": "cancel"},
+                },
                 "metadata": {"user_id": current_user.id, "plan_name": payload.plan_name},
             },
             success_url=f"{settings.frontend_origin}/subscription?payment=success",
