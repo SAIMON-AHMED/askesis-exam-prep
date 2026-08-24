@@ -268,7 +268,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)) -> dic
 
     data_object = event.get("data", {}).get("object", {})
     # Checkout metadata is available on the Checkout Session, not the Charge.
-    if event_type == "checkout.session.completed" and data_object.get("payment_status") == "paid":
+    if event_type == "checkout.session.completed":
         try:
             metadata = data_object.get("metadata", {})
             user_id = metadata.get("user_id")
@@ -291,7 +291,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)) -> dic
                     subscription.stripe_customer_id = data_object.get("customer")
                     db.commit()
 
-            if user_id and exam_id:
+            if user_id and exam_id and data_object.get("payment_status") == "paid":
                 existing = (
                     db.query(ExamPurchase)
                     .filter(ExamPurchase.user_id == user_id, ExamPurchase.exam_id == exam_id)

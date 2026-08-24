@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUserProfile, useUserSettings, updateProfile, changePassword, deactivateAccount } from '@/hooks/useProfile';
+import { useUserProfile, useUserSettings, updateProfile, updateSettings, changePassword, deactivateAccount, logout } from '@/hooks/useProfile';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -22,6 +22,10 @@ export default function ProfilePage() {
 
   const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
   const [isDeactivating, setIsDeactivating] = useState(false);
+  const [theme, setTheme] = useState('light');
+  const [language, setLanguage] = useState('en');
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   React.useEffect(() => {
     if (!isLoggedIn && !profileLoading) {
@@ -34,6 +38,20 @@ export default function ProfilePage() {
       setFullName(profile.full_name);
     }
   }, [profile]);
+
+  React.useEffect(() => {
+    if (settings) {
+      setTheme(settings.theme || 'light');
+      setLanguage(settings.language || 'en');
+      setEmailNotifications(settings.email_notifications);
+    }
+  }, [settings]);
+
+  React.useEffect(() => {
+    document.documentElement.dataset.theme = theme === 'auto'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : theme;
+  }, [theme]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,13 +115,35 @@ export default function ProfilePage() {
     }
   };
 
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      window.location.href = '/login';
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    await updateSettings({ theme, language, email_notifications: emailNotifications });
+  };
+
   return (
     <main style={{ padding: 'var(--space-6)', maxWidth: '1000px', margin: '0 auto' }}>
       {/* Header */}
       <div style={{ marginBottom: 'var(--space-8)' }}>
-        <h1 style={{ margin: '0 0 8px 0', fontSize: '32px', fontWeight: '700' }}>
-          Profile & Settings
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+          <h1 style={{ margin: '0 0 8px 0', fontSize: '32px', fontWeight: '700' }}>Profile & Settings</h1>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            style={{ whiteSpace: 'nowrap' }}
+          >
+            {isLoggingOut ? 'Logging out...' : 'Log out'}
+          </button>
+        </div>
         <p style={{ margin: 0, fontSize: '16px', color: 'var(--text-secondary)' }}>
           Manage your account
         </p>
@@ -247,7 +287,8 @@ export default function ProfilePage() {
                 </label>
                 <select
                   id="theme"
-                  defaultValue={settings?.theme || 'light'}
+                  value={theme}
+                  onChange={(e) => setTheme(e.target.value)}
                   style={{
                     width: '100%',
                     padding: '8px',
@@ -270,7 +311,8 @@ export default function ProfilePage() {
                 </label>
                 <select
                   id="language"
-                  defaultValue={settings?.language || 'en'}
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
                   style={{
                     width: '100%',
                     padding: '8px',
@@ -289,14 +331,15 @@ export default function ProfilePage() {
                 <label style={{ display: 'flex', gap: '8px', alignItems: 'center', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
-                    defaultChecked={settings?.email_notifications}
+                    checked={emailNotifications}
+                    onChange={(e) => setEmailNotifications(e.target.checked)}
                     style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                   />
                   <span>Email notifications</span>
                 </label>
               </div>
 
-              <button className="btn-primary" style={{ width: '100%' }}>
+              <button className="btn-primary" style={{ width: '100%' }} onClick={handleSaveSettings}>
                 Save Settings
               </button>
             </>

@@ -118,6 +118,14 @@ export async function updateSettings(preferences: Record<string, any>): Promise<
   await api.post('/profile/preferences', preferences);
 }
 
+export async function logout(): Promise<void> {
+  try {
+    await api.post('/auth/logout');
+  } finally {
+    window.localStorage.removeItem('access_token');
+  }
+}
+
 export async function deactivateAccount(): Promise<void> {
   await api.post('/profile/deactivate');
 }

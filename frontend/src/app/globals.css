@@ -76,6 +76,10 @@
 
   --bg: var(--color-secondary-bg);
   --fg: var(--color-text);
+  --primary-color: var(--color-primary);
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-secondary);
+  --border-color: var(--color-border);
 }
 
 [data-theme="dark"] {
@@ -85,8 +89,17 @@
   --color-border: #2c313a;
   --color-text: #f4f4f5;
   --color-text-secondary: #b7bcc4;
+  --bg-secondary: #252a33;
+  --color-success-bg: #19351f;
+  --color-error-bg: #3a2024;
+  --color-warning-bg: #3a3019;
+  --current-exam-light: #252a33;
   --bg: var(--color-secondary-bg);
   --fg: var(--color-text);
+  --primary-color: var(--color-primary);
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-secondary);
+  --border-color: var(--color-border);
 }
 
 /* Exam theme overrides */
