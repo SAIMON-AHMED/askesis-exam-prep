@@ -16,6 +16,7 @@ export interface CurrentSubscription {
   id: string;
   plan_name: string;
   status: string;
+  trial_ends_at?: string | null;
 }
 
 export interface SubscriptionUsage {
@@ -154,7 +155,7 @@ export function useSubscriptionUsage() {
   return { usage, loading, error, refetch };
 }
 
-export async function upgradePlan(planName: string): Promise<CurrentSubscription> {
+export async function upgradePlan(planName: string): Promise<CurrentSubscription | { checkout_url: string }> {
   const response = await api.post('/subscription/create', { plan_name: planName });
   return response.data;
 }

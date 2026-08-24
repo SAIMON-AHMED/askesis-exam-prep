@@ -1,6 +1,6 @@
 """Subscription/payment endpoints backed by Stripe."""
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -10,7 +10,16 @@ from app.api.deps import get_current_user
 from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.models import ExamPurchase, Subscription, SubscriptionStatus, User
-from app.schemas.schemas import SubscriptionCreateRequest, SubscriptionOut, SubscriptionPlanOut
+from app.schemas.schemas import (
+    SubscriptionCheckoutOut,
+    SubscriptionCreateRequest,
+    SubscriptionOut,
+    SubscriptionPlanOut,
+)
+from app.services.subscription import (
+    expire_trial_if_needed,
+    get_current_subscription as get_subscription,
+)
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -105,16 +114,20 @@ def get_current_subscription(
         db.commit()
         db.refresh(subscription)
 
-    return subscription
+    return expire_trial_if_needed(subscription, db)
 
 
-@router.post("/create", response_model=SubscriptionOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/create",
+    response_model=SubscriptionCheckoutOut | SubscriptionOut,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_subscription(
     payload: SubscriptionCreateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Subscription:
-    """Create a new subscription for the user."""
+    """Create a Stripe subscription Checkout Session with a three-day trial."""
     try:
         if payload.plan_name not in SUBSCRIPTION_PLANS:
             raise HTTPException(status_code=400, detail="Invalid plan")
@@ -132,15 +145,57 @@ def create_subscription(
         if existing and existing.plan_name == payload.plan_name:
             raise HTTPException(status_code=400, detail="You already have this subscription")
 
-        subscription = Subscription(
-            user_id=current_user.id,
-            plan_name=payload.plan_name,
-            status=SubscriptionStatus.trialing if payload.plan_name != "free" else SubscriptionStatus.active,
+        if payload.plan_name == "free":
+            subscription = Subscription(
+                user_id=current_user.id,
+                plan_name="free",
+                status=SubscriptionStatus.active,
+            )
+            db.add(subscription)
+            db.commit()
+            db.refresh(subscription)
+            return subscription
+
+        if not settings.stripe_secret_key:
+            raise HTTPException(status_code=503, detail="Paid subscriptions are not configured")
+
+        stripe.api_key = settings.stripe_secret_key
+        plan = SUBSCRIPTION_PLANS[payload.plan_name]
+        checkout_session = stripe.checkout.Session.create(
+            mode="subscription",
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": plan["currency"],
+                        "unit_amount": int(plan["price"] * 100),
+                        "recurring": {"interval": "month"},
+                        "product_data": {"name": f"Askesis {plan['name']}"},
+                    },
+                    "quantity": 1,
+                }
+            ],
+            subscription_data={
+                "trial_period_days": plan["trial_period_days"],
+                "metadata": {"user_id": current_user.id, "plan_name": payload.plan_name},
+            },
+            success_url=f"{settings.frontend_origin}/subscription?payment=success",
+            cancel_url=f"{settings.frontend_origin}/subscription?payment=cancelled",
+            metadata={"user_id": current_user.id, "plan_name": payload.plan_name},
+            customer_email=current_user.email,
         )
-        db.add(subscription)
+        db.add(
+            Subscription(
+                user_id=current_user.id,
+                stripe_customer_id=checkout_session.get("customer"),
+                stripe_subscription_id=checkout_session.get("subscription"),
+                plan_name=payload.plan_name,
+                status=SubscriptionStatus.trialing,
+                trial_ends_at=datetime.now(timezone.utc)
+                + timedelta(days=plan["trial_period_days"]),
+            )
+        )
         db.commit()
-        db.refresh(subscription)
-        return subscription
+        return {"checkout_url": checkout_session.url}
     except HTTPException:
         raise
     except Exception as exc:
@@ -158,15 +213,7 @@ def cancel_subscription(
     db: Session = Depends(get_db),
 ) -> dict:
     """Cancel current subscription (downgrade to free)."""
-    subscription = (
-        db.query(Subscription)
-        .filter(Subscription.user_id == current_user.id)
-        .order_by(Subscription.created_at.desc())
-        .first()
-    )
-
-    if not subscription:
-        raise HTTPException(status_code=404, detail="Subscription not found")
+    subscription = get_subscription(current_user.id, db)
 
     # Create a new free subscription
     free_sub = Subscription(
@@ -186,21 +233,7 @@ def get_subscription_usage(
     db: Session = Depends(get_db),
 ) -> dict:
     """Get current subscription usage."""
-    subscription = (
-        db.query(Subscription)
-        .filter(Subscription.user_id == current_user.id)
-        .order_by(Subscription.created_at.desc())
-        .first()
-    )
-
-    if not subscription:
-        subscription = Subscription(
-            user_id=current_user.id,
-            plan_name="free",
-            status=SubscriptionStatus.active,
-        )
-        db.add(subscription)
-        db.commit()
+    subscription = get_subscription(current_user.id, db)
 
     plan = SUBSCRIPTION_PLANS.get(subscription.plan_name, SUBSCRIPTION_PLANS["free"])
 
@@ -240,6 +273,23 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)) -> dic
             metadata = data_object.get("metadata", {})
             user_id = metadata.get("user_id")
             exam_id = metadata.get("exam_id")
+            plan_name = metadata.get("plan_name")
+
+            if user_id and plan_name and data_object.get("subscription"):
+                subscription = (
+                    db.query(Subscription)
+                    .filter(
+                        Subscription.user_id == user_id,
+                        Subscription.plan_name == plan_name,
+                        Subscription.status == SubscriptionStatus.trialing,
+                    )
+                    .order_by(Subscription.created_at.desc())
+                    .first()
+                )
+                if subscription:
+                    subscription.stripe_subscription_id = data_object["subscription"]
+                    subscription.stripe_customer_id = data_object.get("customer")
+                    db.commit()
 
             if user_id and exam_id:
                 existing = (
@@ -265,7 +315,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)) -> dic
             raise HTTPException(status_code=500, detail="Webhook processing failed")
 
     # Handle subscriptions
-    stripe_subscription_id = data_object.get("id")
+    stripe_subscription_id = data_object.get("subscription") if event_type == "invoice.payment_failed" else data_object.get("id")
     if stripe_subscription_id:
         subscription = (
             db.query(Subscription)
@@ -278,7 +328,17 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)) -> dic
             elif event_type == "invoice.payment_failed":
                 subscription.status = SubscriptionStatus.past_due
             elif event_type in ("customer.subscription.updated", "customer.subscription.created"):
-                subscription.status = SubscriptionStatus.active
+                stripe_status = data_object.get("status")
+                subscription.status = {
+                    "trialing": SubscriptionStatus.trialing,
+                    "active": SubscriptionStatus.active,
+                    "past_due": SubscriptionStatus.past_due,
+                    "canceled": SubscriptionStatus.canceled,
+                    "unpaid": SubscriptionStatus.past_due,
+                }.get(stripe_status, subscription.status)
+                trial_end = data_object.get("trial_end")
+                if trial_end:
+                    subscription.trial_ends_at = datetime.fromtimestamp(trial_end, tz=timezone.utc)
             db.commit()
 
     return {"received": True}

@@ -46,10 +46,13 @@ export default function SubscriptionPage() {
     setMessage('');
 
     try {
-      await upgradePlan(planId);
+      const result = await upgradePlan(planId);
+      if ('checkout_url' in result) {
+        window.location.assign(result.checkout_url);
+        return;
+      }
       setMessage(`Successfully upgraded to ${planId}!`);
       setTimeout(() => setMessage(''), 3000);
-      // Refresh page to update subscription
       setTimeout(() => window.location.reload(), 1500);
     } catch (err: any) {
       setMessage(err.response?.data?.detail || 'Failed to upgrade plan');

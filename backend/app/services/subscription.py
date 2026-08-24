@@ -9,6 +9,21 @@ FREE_DAILY_PRACTICE_LIMIT = 5
 _ACTIVE_STATUSES = {SubscriptionStatus.active, SubscriptionStatus.trialing}
 
 
+def expire_trial_if_needed(subscription: Subscription, db: Session) -> Subscription:
+    """Expire a local trial before any access decision is made."""
+    now = datetime.now(timezone.utc)
+    trial_ends_at = subscription.trial_ends_at
+    if (
+        subscription.status == SubscriptionStatus.trialing
+        and trial_ends_at is not None
+        and trial_ends_at <= now
+    ):
+        subscription.status = SubscriptionStatus.canceled
+        db.commit()
+        db.refresh(subscription)
+    return subscription
+
+
 def get_current_subscription(user_id: str, db: Session) -> Subscription:
     """Get the user's current subscription, or create a free one if none exists."""
     subscription = (
@@ -27,7 +42,7 @@ def get_current_subscription(user_id: str, db: Session) -> Subscription:
         db.add(subscription)
         db.commit()
         db.refresh(subscription)
-    return subscription
+    return expire_trial_if_needed(subscription, db)
 
 
 def is_premium_user(user_id: str, db: Session) -> bool:

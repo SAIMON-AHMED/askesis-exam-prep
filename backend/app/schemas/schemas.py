@@ -148,6 +148,7 @@ class SubscriptionOut(BaseModel):
     id: str
     plan_name: str
     status: str
+    trial_ends_at: datetime | None = None
 
     class Config:
         from_attributes = True
@@ -162,6 +163,10 @@ class SubscriptionPlanOut(BaseModel):
     exams_per_month: int
     trial_period_days: int = 0
     features: list[str]
+
+
+class SubscriptionCheckoutOut(BaseModel):
+    checkout_url: str
 
 
 # ---------- Exam purchases ----------
