@@ -35,7 +35,7 @@ export default function HomePage() {
     },
     {
       q: "Is there a free trial?",
-      a: "Yes! You get 5 free practice questions per day for any exam. Upgrade to unlimited access with a subscription or exam purchase."
+      a: "Yes! You get a 3-day free trial of Pro or Premium, plus 5 free practice questions per day for any exam. Upgrade to unlimited access with a subscription or exam purchase."
     }
   ];
 

@@ -11,7 +11,8 @@ class Settings(BaseSettings):
 
     jwt_secret_key: str = "insecure-dev-secret-change-me"
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60
+    access_token_expire_minutes: int = 5_256_000
+    redis_url: str = "redis://localhost:6379/0"
 
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"

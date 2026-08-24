@@ -60,6 +60,11 @@ export default function PlanCard({ plan, isCurrentPlan, onSelect, isLoading }: P
         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>
           <strong>{plan.exams_per_month >= 999 ? 'Unlimited' : plan.exams_per_month}</strong> exams/month
         </p>
+        {plan.trial_period_days > 0 && (
+          <p style={{ fontSize: '14px', color: 'var(--primary-color)', margin: '8px 0 0' }}>
+            <strong>{plan.trial_period_days}-day</strong> free trial
+          </p>
+        )}
       </div>
 
       <div style={{ marginBottom: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>

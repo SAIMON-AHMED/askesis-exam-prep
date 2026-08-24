@@ -160,6 +160,7 @@ class SubscriptionPlanOut(BaseModel):
     currency: str
     questions_per_day: int
     exams_per_month: int
+    trial_period_days: int = 0
     features: list[str]
 
 

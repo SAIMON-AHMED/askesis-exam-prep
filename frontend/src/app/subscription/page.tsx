@@ -218,7 +218,7 @@ export default function SubscriptionPage() {
               What is a free trial?
             </summary>
             <p style={{ marginTop: '12px', marginBottom: 0, color: 'var(--text-secondary)' }}>
-              Pro and Premium plans include a 14-day free trial. No credit card required to start. You'll be
+              Pro and Premium plans include a 3-day free trial. No credit card required to start. You'll be
               billed when the trial ends unless you cancel.
             </p>
           </details>

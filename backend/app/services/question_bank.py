@@ -13,6 +13,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.core.cache import CACHE_TTL, get_cache
 from app.models.models import GeneratedQuestion, QuestionFormat, UserAttempt
 
 logger = logging.getLogger(__name__)
@@ -215,11 +216,37 @@ def select_practice_questions(
     Returns an empty list once the student has seen everything stored for this topic, so
     the caller can fall back to generating genuinely new material.
     """
-    pool = (
-        db.query(GeneratedQuestion)
-        .filter(GeneratedQuestion.exam_type == exam_type, GeneratedQuestion.topic == topic)
-        .all()
-    )
+    cache = get_cache()
+    cache_key = f"question-pool:{exam_type.lower()}:{topic.lower()}"
+    cached_pool = cache.get(cache_key)
+    if cached_pool is not None:
+        pool = [GeneratedQuestion(**item) for item in cached_pool]
+    else:
+        pool = (
+            db.query(GeneratedQuestion)
+            .filter(GeneratedQuestion.exam_type == exam_type, GeneratedQuestion.topic == topic)
+            .all()
+        )
+        cache.set(
+            cache_key,
+            [
+                {
+                    "id": q.id,
+                    "exam_type": q.exam_type,
+                    "topic": q.topic,
+                    "difficulty": q.difficulty,
+                    "question_format": getattr(q.question_format, "value", q.question_format),
+                    "question_text": q.question_text,
+                    "options": q.options,
+                    "correct_answer": q.correct_answer,
+                    "explanation": q.explanation,
+                    "validated": q.validated,
+                    "visual_aid": q.visual_aid,
+                }
+                for q in pool
+            ],
+            CACHE_TTL["question_pool"],
+        )
     if not pool:
         return []
 

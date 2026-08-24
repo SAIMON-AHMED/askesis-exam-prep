@@ -4,7 +4,10 @@ import logging
 from typing import Any, Optional, Callable
 from functools import wraps
 from datetime import timedelta
-import redis
+try:
+    import redis
+except ModuleNotFoundError:
+    redis = None
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -16,6 +19,10 @@ class CacheService:
 
     def __init__(self, redis_url: Optional[str] = None):
         self.redis_url = redis_url or settings.redis_url
+        if redis is None:
+            self.enabled = False
+            self.client = None
+            return
         try:
             self.client = redis.from_url(
                 self.redis_url,
