@@ -221,24 +221,7 @@ export default function SubscriptionPage() {
               What is a free trial?
             </summary>
             <p style={{ marginTop: '12px', marginBottom: 0, color: 'var(--text-secondary)' }}>
-              Pro and Premium plans include a 3-day free trial. A payment method is required to start the trial.
-            </p>
-          </details>
-
-          <details
-            style={{
-              padding: '16px',
-              border: '1px solid var(--border-color)',
-              borderRadius: '8px',
-              cursor: 'pointer',
-            }}
-          >
-            <summary style={{ fontWeight: '600', cursor: 'pointer' }}>
-              Can I get a refund?
-            </summary>
-            <p style={{ marginTop: '12px', marginBottom: 0, color: 'var(--text-secondary)' }}>
-              We offer a 30-day money-back guarantee. If you're not satisfied, contact our support team for a
-              full refund.
+              Pro and Premium plans include a 3-day free trial. No credit card required to start.
             </p>
           </details>
 
