@@ -17,6 +17,7 @@ from app.schemas.schemas import (
     SubscriptionPlanOut,
 )
 from app.services.subscription import (
+    expire_expired_trials,
     expire_trial_if_needed,
     get_current_subscription as get_subscription,
 )
@@ -96,6 +97,8 @@ def get_current_subscription(
     db: Session = Depends(get_db),
 ) -> Subscription:
     """Get current user's subscription."""
+    expire_expired_trials(db)
+
     subscription = (
         db.query(Subscription)
         .filter(Subscription.user_id == current_user.id)

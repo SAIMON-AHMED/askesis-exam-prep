@@ -24,8 +24,32 @@ def expire_trial_if_needed(subscription: Subscription, db: Session) -> Subscript
     return subscription
 
 
+def expire_expired_trials(db: Session) -> int:
+    """Cancel any trial subscriptions whose time window has elapsed."""
+    now = datetime.now(timezone.utc)
+    expired = (
+        db.query(Subscription)
+        .filter(
+            Subscription.status == SubscriptionStatus.trialing,
+            Subscription.trial_ends_at.is_not(None),
+            Subscription.trial_ends_at <= now,
+        )
+        .all()
+    )
+
+    for subscription in expired:
+        subscription.status = SubscriptionStatus.canceled
+
+    if expired:
+        db.commit()
+
+    return len(expired)
+
+
 def get_current_subscription(user_id: str, db: Session) -> Subscription:
     """Get the user's current subscription, or create a free one if none exists."""
+    expire_expired_trials(db)
+
     subscription = (
         db.query(Subscription)
         .filter(Subscription.user_id == user_id)
