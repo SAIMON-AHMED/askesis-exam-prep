@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server';
+import { mockBackend } from '@/lib/mockBackendStore';
 
 export async function GET() {
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const hours = [1.2, 0.8, 1.5, 2.0, 1.0, 2.5, 1.4];
+  const today = new Date();
+  const days = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() - (6 - index));
+    return date;
+  });
   return NextResponse.json(
-    days.map((day, idx) => ({
-      date: day,
-      study_hours: hours[idx] ?? 1.0,
+    days.map((date) => ({
+      date: date.toISOString().slice(0, 10),
+      study_hours: Number(mockBackend.studyLogs
+        .filter((log) => log.timestamp.slice(0, 10) === date.toISOString().slice(0, 10))
+        .reduce((total, log) => total + log.duration_minutes / 60, 0).toFixed(2)),
     }))
   );
 }

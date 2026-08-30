@@ -33,14 +33,14 @@ export interface DailyGoalData {
 export const DailyStudyGoalCard: React.FC = () => {
   const { success, error: notifyError, info } = useNotification();
   const [data, setData] = useState<DailyGoalData>({
-    today_study_hours: 1.2,
+    today_study_hours: 0,
     daily_study_goal_hours: 2.0,
-    progress_percentage: 60,
+    progress_percentage: 0,
     is_goal_reached: false,
-    remaining_hours: 0.8,
+    remaining_hours: 2.0,
     daily_goal_reminder_enabled: true,
     daily_goal_reminder_time: '20:00',
-    current_streak: 12,
+    current_streak: 0,
     logs: [],
   });
 
@@ -69,7 +69,7 @@ export const DailyStudyGoalCard: React.FC = () => {
         }
       }
     } catch {
-      // Keep default fallback state if backend request fails
+      notifyError('Unable to load your study goal. Please refresh and try again.');
     } finally {
       setIsLoading(false);
     }

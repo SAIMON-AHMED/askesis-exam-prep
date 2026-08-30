@@ -78,7 +78,7 @@ export function useStudyTimeBreakdown() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await api.get('/analytics/study-time');
+        const response = await api.get('/analytics/study-time-breakdown');
         setData(response.data);
         setError(null);
       } catch (err) {
@@ -178,7 +178,7 @@ export function useStudyStreak() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await api.get('/analytics/streak');
+        const response = await api.get('/analytics/study-streak');
         setData(response.data);
         setError(null);
       } catch (err) {

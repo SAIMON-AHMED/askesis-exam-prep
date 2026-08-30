@@ -43,9 +43,9 @@ export default function AnalyticsPage() {
 
   const [showReportModal, setShowReportModal] = useState(false);
 
-  const avgScore = overview?.average_score || 81;
-  const studyHours = overview?.total_study_hours || 14.5;
-  const examsCount = overview?.exams_completed || 5;
+  const avgScore = overview?.average_score ?? 0;
+  const studyHours = overview?.total_study_hours ?? 0;
+  const examsCount = overview?.exams_completed ?? 0;
 
   return (
     <main style={{ padding: '28px 24px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -113,25 +113,25 @@ export default function AnalyticsPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
           <StatCard
             title="Total Study Hours"
-            value={overview?.total_study_hours ?? 14.5}
+            value={overview?.total_study_hours ?? 0}
             unit="hours"
             icon="📚"
           />
           <StatCard
             title="Exams Completed"
-            value={overview?.exams_completed ?? 5}
+            value={overview?.exams_completed ?? 0}
             unit="exams"
             icon="✅"
           />
           <StatCard
             title="Average Accuracy"
-            value={overview?.average_score ?? 81}
+            value={overview?.average_score ?? 0}
             unit="%"
             icon="🎯"
           />
           <StatCard
             title="Study Streak"
-            value={streak?.current_streak ?? 12}
+            value={streak?.current_streak ?? 0}
             unit="days"
             icon="🔥"
           />

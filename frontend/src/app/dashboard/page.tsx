@@ -117,11 +117,6 @@ export default function DashboardPage() {
       {/* Daily Study Goal Progress Tracker & Time Logger */}
       <DailyStudyGoalCard />
 
-      <div className="card fade-in">
-        <h2 className="card-title">Welcome back</h2>
-        <p>Pick up where you left off, or jump straight into a practice session.</p>
-      </div>
-
       {recommendation && (
         <section className="card fade-in" style={{ borderLeft: "4px solid var(--color-primary)" }}>
           <span className="badge">Recommended next</span>
