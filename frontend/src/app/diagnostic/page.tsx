@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { EXAMS } from "@/lib/examConstants";
 import { getCurriculumByExamId } from "@/lib/curriculumData";
@@ -22,6 +23,7 @@ interface DiagnosticResult {
 }
 
 export default function DiagnosticPage() {
+  const router = useRouter();
   const [exam, setExam] = useState("sat");
   const [count, setCount] = useState(5);
   const [questions, setQuestions] = useState<DiagnosticQuestion[]>([]);

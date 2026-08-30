@@ -18,7 +18,7 @@ interface Recommendation {
 export default function DashboardPage() {
   const router = useRouter();
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
-  const [subscription, setSubscription] = useState<{ status?: string; trial_ends_at?: string | null } | null>(null);
+  const [subscription, setSubscription] = useState<{ status?: string; plan_name?: string; trial_ends_at?: string | null } | null>(null);
   const [onboarding, setOnboarding] = useState<{ completed?: boolean } | null>(null);
 
   useEffect(() => {

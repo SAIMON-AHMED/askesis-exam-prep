@@ -610,10 +610,6 @@ export default function PracticePage() {
           </div>
         )}
 
-
-
-
-
       {error && !limitReached && (
         <div className="alert alert-error fade-in" role="alert">
           {error}
@@ -690,15 +686,15 @@ export default function PracticePage() {
                   : submitAnswer()
               }
               disabled={!answer || submitting || loading}
-              style={{ flex: 1 }}
+              style={{ flex: 1, fontWeight: 600 }}
             >
               {submitting
                 ? "Submitting..."
                 : !feedback
                 ? "Submit Answer"
                 : isSessionComplete
-                ? "Complete Session"
-                : "Next Question"}
+                ? "Complete Session ✓"
+                : "Next Question →"}
             </button>
             {feedback && !isSessionComplete && (
               <button
@@ -713,7 +709,7 @@ export default function PracticePage() {
           {feedback && (
             <div
               className={`alert fade-in ${feedback.startsWith("Correct") ? "alert-success" : "alert-error"}`}
-              style={{ 
+              style={{
                 marginTop: 16,
                 display: "flex",
                 alignItems: "center",
@@ -736,34 +732,9 @@ export default function PracticePage() {
               </div>
             </div>
           )}
-          <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
-            <button
-              className="btn-primary"
-              onClick={() =>
-                feedback
-                  ? isSessionComplete
-                    ? quitSession()
-                    : continueToNextQuestion()
-                  : submitAnswer()
-              }
-              disabled={!answer || submitting || loading}
-              style={{ flex: 1, fontWeight: 600 }}
-            >
-              {submitting
-                ? "Submitting..."
-                : !feedback
-                ? "Submit Answer"
-                : isSessionComplete
-                ? "Complete Session ✓"
-                : "Next Question →"}
-            </button>
-            {feedback && !isSessionComplete && (
-              <button
-                className="btn-secondary"
-                onClick={quitSession}
-                style={{ padding: "8px 16px" }}
-              >
-                Quit
-              </button>
-            )}
-          </div>
+        </div>
+      )}
+    </div>
+  </div>
+  );
+}
