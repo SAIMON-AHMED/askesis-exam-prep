@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { ButtonSpinner } from "@/components/ui/ButtonSpinner";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -167,15 +168,24 @@ export default function ForgotPasswordPage() {
             className="btn-primary"
             type="submit"
             disabled={loading}
+            aria-busy={loading}
             style={{
               width: "100%",
               padding: "11px 16px",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
               fontWeight: 600,
               fontSize: 14,
               borderRadius: 8,
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.85 : 1,
+              transition: "all 0.15s ease",
             }}
           >
-            {loading ? "Sending link..." : "Send password reset link"}
+            {loading && <ButtonSpinner size={18} color="#ffffff" />}
+            <span>{loading ? "Sending link..." : "Send password reset link"}</span>
           </button>
 
           <p style={{ marginTop: 20, fontSize: "0.9rem", textAlign: "center", color: "var(--color-text-secondary)" }}>

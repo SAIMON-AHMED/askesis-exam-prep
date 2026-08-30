@@ -83,7 +83,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
   return (
     <html lang="en" className={inter.variable}>
-      <head>
+      <body>
         <Script
           id="structured-data"
           type="application/ld+json"
@@ -94,8 +94,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           src="https://accounts.google.com/gsi/client"
           strategy="lazyOnload"
         />
-      </head>
-      <body>
         <ExamProvider>
           <NotificationProvider>
             <AssistantProvider>

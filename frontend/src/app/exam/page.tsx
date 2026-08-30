@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { getExam } from "@/lib/examConstants";
 import { getCurriculumByExamId } from "@/lib/curriculumData";
 import VisualAid, { VisualAidData } from "@/components/VisualAid";
+import { ShareResultsCard } from "@/components/exams/ShareResultsCard";
 
 interface ExamQuestion {
   id: string;
@@ -135,7 +136,7 @@ function ExamPageInner() {
 
   if (result) {
     return (
-      <div>
+      <div style={{ maxWidth: "800px", margin: "0 auto" }}>
         <h1>Exam Results</h1>
         <div className="card fade-in">
           <span className="badge">Complete</span>
@@ -150,6 +151,15 @@ function ExamPageInner() {
             </p>
           )}
         </div>
+
+        {/* Share Results Summary Card */}
+        <ShareResultsCard
+          result={result}
+          examType={examType}
+          examTitle={pageTitle}
+          timeTakenMinutes={durationMinutes}
+        />
+
         <div className="card fade-in">
           <h2>Topic breakdown</h2>
           {result.topic_breakdown.map((t) => {

@@ -887,8 +887,17 @@ img[loading="lazy"] {
   contain: layout style;
 }
 
-/* Optimize grid layouts */
-.grid-2, .grid-3 {
-  contain: layout;
+/* Button Spinner Animations */
+@keyframes spin-custom {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-custom {
+  animation: spin-custom 0.75s linear infinite;
 }
 

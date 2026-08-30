@@ -55,7 +55,8 @@ const nextConfig = {
     ]
   },
 
-  output: 'standalone',
+  // Only enable standalone output when explicitly building for standalone Docker (not on Vercel)
+  output: process.env.BUILD_STANDALONE === 'true' ? 'standalone' : undefined,
 
   // Environment variables
   env: {

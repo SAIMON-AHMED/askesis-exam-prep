@@ -9,6 +9,8 @@ import { getCurriculumByExamId } from "@/lib/curriculumData";
 import { getExam, EXAMS } from "@/lib/examConstants";
 import { useExamAccess } from "@/hooks/useExamAccess";
 import VisualAid, { VisualAidData } from "@/components/VisualAid";
+import { CustomTestBuilder, CustomTestConfig } from "@/components/practice/CustomTestBuilder";
+import { ScratchpadDrawer } from "@/components/practice/ScratchpadDrawer";
 
 interface GeneratedQuestion {
   id: string;
@@ -38,23 +40,17 @@ interface PracticeSession {
   correctCount: number;
   wrongCount: number;
   sessionStartTime: number;
+  totalTargetQuestions?: number;
+  isTimed?: boolean;
+  timeLimitSeconds?: number;
 }
 
 const OPTION_LETTERS = ["A", "B", "C", "D", "E", "F"];
-
-// A small first batch reaches the student fastest; the buffer is then topped up in the
-// background so later questions are served from memory with no visible wait.
 const FIRST_BATCH_SIZE = 3;
 const REFILL_SIZE = 5;
-/** Start refilling while this many questions are still queued, so the fetch overlaps reading. */
 const LOW_WATER_MARK = 4;
-/** Caps how far ahead we generate, so a student who quits early hasn't burned tokens. */
 const MAX_BUFFER = 12;
 
-/**
- * Build a batch from the offline question bank when live generation is unavailable.
- * The bank is imported dynamically because it is ~1 MB and most sessions never need it.
- */
 async function getLocalQuestions(
   examId: string,
   topicId: string,
@@ -91,10 +87,10 @@ async function getLocalQuestions(
 }
 
 function formatElapsed(seconds: number) {
-  const m = Math.floor(seconds / 60)
+  const m = Math.floor(Math.max(0, seconds) / 60)
     .toString()
     .padStart(2, "0");
-  const s = Math.floor(seconds % 60)
+  const s = Math.floor(Math.max(0, seconds) % 60)
     .toString()
     .padStart(2, "0");
   return `${m}:${s}`;
@@ -105,11 +101,11 @@ export default function PracticePage() {
   const { selectedExam } = useExam();
   const { hasAccess, loading: accessLoading } = useExamAccess();
   const examIdFromUrl = params.examId as string | undefined;
-  
-  // Allow user to select exam independently
+
+  const [activeTab, setActiveTab] = useState<"quick" | "builder">("quick");
   const [selectedExamId, setSelectedExamId] = useState<string>("");
-  const currentExamId = selectedExamId || examIdFromUrl || selectedExam?.id || "";
-  const currentExam = getExam(currentExamId) || EXAMS[0];
+  const currentExamId = selectedExamId || examIdFromUrl || selectedExam?.id || "sat";
+  const currentExam = getExam(currentExamId) || EXAMS.sat;
   const curriculum = getCurriculumByExamId(currentExamId);
 
   const [difficulty, setDifficulty] = useState(2);
@@ -123,18 +119,20 @@ export default function PracticePage() {
   const [limitReached, setLimitReached] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Scratchpad & Elimination states
+  const [showScratchpad, setShowScratchpad] = useState(false);
+  const [eliminatedOptions, setEliminatedOptions] = useState<Record<string, boolean>>({});
+  const [isHighlighted, setIsHighlighted] = useState(false);
+
   const [session, setSession] = useState<PracticeSession | null>(null);
   const [sessionActive, setSessionActive] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Questions already generated and waiting to be shown. Ref is the source of truth so the
-  // background refill never reads stale state; bufferCount mirrors it for rendering.
   const queueRef = useRef<GeneratedQuestion[]>([]);
   const [bufferCount, setBufferCount] = useState(0);
   const refillingRef = useRef(false);
-  /** Next topic to generate from; advances ahead of the topic the student is currently on. */
   const prefetchCursorRef = useRef(0);
   const [exhausted, setExhausted] = useState(false);
 
@@ -164,12 +162,21 @@ export default function PracticePage() {
   useEffect(() => {
     if (!sessionActive) return;
     timerRef.current = setInterval(() => {
-      setElapsed((Date.now() - (session?.sessionStartTime || Date.now())) / 1000);
+      if (session?.isTimed && session.timeLimitSeconds) {
+        const spent = (Date.now() - session.sessionStartTime) / 1000;
+        const remaining = Math.max(0, session.timeLimitSeconds - spent);
+        setElapsed(remaining);
+        if (remaining <= 0) {
+          setFeedback("Time is up! Your timed practice drill has completed.");
+        }
+      } else {
+        setElapsed((Date.now() - (session?.sessionStartTime || Date.now())) / 1000);
+      }
     }, 1000);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [sessionActive, session?.sessionStartTime]);
+  }, [sessionActive, session?.sessionStartTime, session?.isTimed, session?.timeLimitSeconds]);
 
   const startPracticeSession = async () => {
     const allTopics = curriculum.sections.flatMap((s) => s.topics);
@@ -186,6 +193,29 @@ export default function PracticePage() {
       sessionStartTime: Date.now(),
     };
 
+    await initSession(newSession, difficulty);
+  };
+
+  const handleStartCustomTest = async (config: CustomTestConfig) => {
+    setSelectedExamId(config.examId);
+    const newSession: PracticeSession = {
+      examId: config.examId,
+      topics: config.topicNames,
+      topicIds: config.topicIds,
+      currentTopicIndex: 0,
+      completedQuestions: [],
+      correctCount: 0,
+      wrongCount: 0,
+      sessionStartTime: Date.now(),
+      totalTargetQuestions: config.questionCount,
+      isTimed: config.mode === "timed",
+      timeLimitSeconds: config.timeLimitMinutes > 0 ? config.timeLimitMinutes * 60 : undefined,
+    };
+
+    await initSession(newSession, config.difficulty || 2);
+  };
+
+  const initSession = async (newSession: PracticeSession, diff: number) => {
     queueRef.current = [];
     prefetchCursorRef.current = 0;
     refillingRef.current = false;
@@ -193,12 +223,14 @@ export default function PracticePage() {
     setExhausted(false);
     setSession(newSession);
     setSessionActive(true);
-    setElapsed(0);
+    setElapsed(newSession.isTimed && newSession.timeLimitSeconds ? newSession.timeLimitSeconds : 0);
     setFeedback(null);
     setError(null);
+    setEliminatedOptions({});
+    setIsHighlighted(false);
 
     setLoading(true);
-    const first = await fetchBatch(newSession, FIRST_BATCH_SIZE);
+    const first = await fetchBatch(newSession, FIRST_BATCH_SIZE, diff);
     setLoading(false);
 
     if (first.length === 0) {
@@ -210,18 +242,14 @@ export default function PracticePage() {
     queueRef.current = rest;
     syncBuffer();
     showQuestion(head, newSession);
-    void ensureBuffer(newSession);
+    void ensureBuffer(newSession, diff);
   };
 
-  /**
-   * Generate one batch for the next unused topic. Falls back to the offline bank so a
-   * background refill failure is never surfaced to the student mid-session.
-   */
   const fetchBatch = async (
     currentSession: PracticeSession,
-    count: number
+    count: number,
+    diffLevel = difficulty
   ): Promise<GeneratedQuestion[]> => {
-    // A single-topic session keeps drawing from that topic instead of running out.
     const singleTopic = currentSession.topics.length <= 1;
     const topicIndex = singleTopic
       ? 0
@@ -235,9 +263,9 @@ export default function PracticePage() {
     try {
       const endpoint = quota?.is_premium ? "/questions/unlimited/next" : "/questions/generate";
       const res = await api.post(endpoint, {
-        exam_type: currentExam?.displayName || "SAT",
+        exam_type: getExam(currentSession.examId)?.displayName || "SAT",
         topic: topicName,
-        difficulty,
+        difficulty: diffLevel,
         question_format: "multiple_choice",
         number_of_questions: count,
       });
@@ -254,7 +282,7 @@ export default function PracticePage() {
       return tag(
         await getLocalQuestions(
           currentSession.examId,
-          currentSession.topicIds[topicIndex],
+          currentSession.topicIds[topicIndex] || "algebra",
           served,
           count
         )
@@ -262,8 +290,7 @@ export default function PracticePage() {
     }
   };
 
-  /** Top up the queue in the background. Single-flight so rapid advances can't stack fetches. */
-  const ensureBuffer = async (currentSession: PracticeSession) => {
+  const ensureBuffer = async (currentSession: PracticeSession, diffLevel = difficulty) => {
     if (refillingRef.current || limitReached) return;
     if (queueRef.current.length > LOW_WATER_MARK) return;
     if (prefetchCursorRef.current >= currentSession.topics.length) {
@@ -277,7 +304,7 @@ export default function PracticePage() {
         queueRef.current.length < MAX_BUFFER &&
         prefetchCursorRef.current < currentSession.topics.length
       ) {
-        const batch = await fetchBatch(currentSession, REFILL_SIZE);
+        const batch = await fetchBatch(currentSession, REFILL_SIZE, diffLevel);
         if (batch.length === 0) break;
         queueRef.current = [...queueRef.current, ...batch];
         syncBuffer();
@@ -292,10 +319,19 @@ export default function PracticePage() {
     setQuestions([q]);
     setAnswer("");
     setFeedback(null);
+    setEliminatedOptions({});
+    setIsHighlighted(false);
     setStartTime(Date.now());
     if (q.topicIndex !== undefined && q.topicIndex !== currentSession.currentTopicIndex) {
       setSession({ ...currentSession, currentTopicIndex: q.topicIndex });
     }
+  };
+
+  const toggleElimination = (e: React.MouseEvent, key: string) => {
+    e.stopPropagation();
+    if (feedback) return;
+    setEliminatedOptions((prev) => ({ ...prev, [key]: !prev[key] }));
+    if (answer === key) setAnswer("");
   };
 
   async function submitAnswer() {
@@ -308,7 +344,6 @@ export default function PracticePage() {
       let correctAnswerText: string;
 
       if (q.id.startsWith("local-")) {
-        // Built-in bank question — grade locally.
         isCorrect = answer === q.correct_answer;
         explanationText = q.explanation;
         correctAnswerText = q.correct_answer;
@@ -338,7 +373,7 @@ export default function PracticePage() {
       setFeedback(
         isCorrect
           ? `Correct! ${explanationText}`
-          : `Incorrect. Correct answer: ${correctAnswerText}. ${explanationText}`
+          : `Incorrect. Correct answer: Option ${correctAnswerText}. ${explanationText}`
       );
     } finally {
       setSubmitting(false);
@@ -347,6 +382,14 @@ export default function PracticePage() {
 
   const continueToNextQuestion = async () => {
     if (!session) return;
+
+    if (
+      session.totalTargetQuestions &&
+      session.completedQuestions.length >= session.totalTargetQuestions
+    ) {
+      setExhausted(true);
+      return;
+    }
 
     const next = queueRef.current.shift();
     syncBuffer();
@@ -357,7 +400,6 @@ export default function PracticePage() {
       return;
     }
 
-    // Buffer ran dry (slow network or a very fast student) — wait for one batch.
     if (prefetchCursorRef.current >= session.topics.length) {
       setExhausted(true);
       return;
@@ -390,296 +432,377 @@ export default function PracticePage() {
     refillingRef.current = false;
     syncBuffer();
     setExhausted(false);
+    setShowScratchpad(false);
   };
 
-  const isSessionComplete = Boolean(session) && exhausted && bufferCount === 0;
+  const isSessionComplete =
+    Boolean(session) &&
+    (exhausted || (session?.totalTargetQuestions && session.completedQuestions.length >= session.totalTargetQuestions)) &&
+    bufferCount === 0;
+
   const question = questions[0];
-  const showHud = sessionActive;
 
   if (!sessionActive) {
     return (
-      <div style={{ maxWidth: "800px", margin: "0 auto", padding: "40px 24px" }}>
-        <h1>Practice Mode</h1>
-        <p style={{ color: "#6b7280", marginBottom: "24px" }}>
-          Select an exam and start practicing with fresh, adaptive questions.
-        </p>
-
-        <div className="card" style={{ marginBottom: "24px" }}>
-          <h2 className="card-title">Session Setup</h2>
-          
-          <label
-            htmlFor="practice-exam"
-            style={{ marginBottom: "8px", display: "block", fontWeight: "500" }}
-          >
-            Select Exam
-          </label>
-          <select
-            id="practice-exam"
-            value={selectedExamId}
-            onChange={(e) => {
-              setSelectedExamId(e.target.value);
-              setSelectedTopicId("");
-            }}
-            style={{ marginBottom: "24px" }}
-          >
-            <option value="">Choose an exam...</option>
-            {Object.values(EXAMS).map((exam) => (
-              <option key={exam.id} value={exam.id}>
-                {exam.displayName}
-                {!accessLoading && !hasAccess(exam.id) ? " — 5 free questions/day" : ""}
-              </option>
-            ))}
-          </select>
-
-          {selectedExamId && !accessLoading && !hasAccess(selectedExamId) && (
-            <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "16px" }}>
-              You're on the free tier for this exam (5 questions/day).{" "}
-              <Link href="/exams" style={{ fontWeight: 600 }}>
-                Unlock it
-              </Link>{" "}
-              for unlimited practice.
-            </p>
-          )}
-
-          {selectedExamId && (
-            <>
-              <label
-                htmlFor="practice-topic"
-                style={{ marginBottom: "8px", display: "block", fontWeight: "500" }}
-              >
-                Select Topic
-              </label>
-              <select
-                id="practice-topic"
-                value={selectedTopicId}
-                onChange={(e) => setSelectedTopicId(e.target.value)}
-                style={{ marginBottom: "24px" }}
-              >
-                <option value="">All topics ({curriculum.totalTopics})</option>
-                {curriculum.sections.map((section) => (
-                  <optgroup key={section.id} label={section.name}>
-                    {section.topics.map((topic) => (
-                      <option key={topic.id} value={topic.id}>
-                        {topic.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-
-              <label
-                htmlFor="practice-difficulty"
-                style={{ marginBottom: "8px", display: "block", fontWeight: "500" }}
-              >
-                Difficulty Level
-              </label>
-              <select
-                id="practice-difficulty"
-                value={difficulty}
-                onChange={(e) => setDifficulty(Number(e.target.value))}
-                style={{ marginBottom: "24px" }}
-              >
-                {[1, 2, 3, 4, 5].map((d) => (
-                  <option key={d} value={d}>
-                    Level {d}
-                  </option>
-                ))}
-              </select>
-
-              <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px" }}>
-                {selectedTopicId ? (
-                  <>
-                    You'll keep practicing <strong>{selectedTopicName}</strong> at your chosen
-                    difficulty until you quit.
-                  </>
-                ) : (
-                  <>
-                    You'll practice through all {curriculum.sections.length} sections (
-                    {curriculum.totalTopics} topics) at your chosen difficulty level.
-                  </>
-                )}
+      <div style={{ maxWidth: "880px", margin: "0 auto", padding: "36px 24px" }}>
+        {/* Header */}
+        <div style={{ marginBottom: "28px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+            <div>
+              <h1 style={{ margin: "0 0 6px 0", fontSize: "28px", fontWeight: 700 }}>Practice & Exam Simulator</h1>
+              <p style={{ margin: 0, color: "#6b7280", fontSize: "15px" }}>
+                Reinforce test-taking strategies with adaptive drills, strike-through elimination, and scratchpad tools.
               </p>
-
-              <button
-                className="btn-primary"
-                onClick={startPracticeSession}
-                style={{ padding: "12px 24px" }}
-              >
-                Start Practice Session
-              </button>
-            </>
-          )}
-
-          {limitReached && (
-            <div
-              className="alert alert-warning fade-in"
-              style={{ marginTop: "16px" }}
-            >
-              You've reached your daily free practice limit. Upgrade to Premium
-              for unlimited practice.
-              <Link
-                href="/subscription"
-                className="btn-secondary btn-sm"
-                style={{ marginLeft: "8px" }}
-              >
-                Upgrade
-              </Link>
             </div>
-          )}
+            <Link href="/review" className="btn-secondary" style={{ padding: "8px 14px", fontSize: "14px" }}>
+              📇 Flash Review Queue
+            </Link>
+          </div>
+
+          {/* Tab switches */}
+          <div style={{ display: "flex", gap: "10px", marginTop: "20px", borderBottom: "1px solid #e5e7eb", paddingBottom: "12px" }}>
+            <button
+              type="button"
+              onClick={() => setActiveTab("quick")}
+              style={{
+                padding: "8px 16px",
+                borderRadius: "8px",
+                border: "none",
+                fontWeight: 600,
+                fontSize: "14px",
+                backgroundColor: activeTab === "quick" ? "#eff6ff" : "transparent",
+                color: activeTab === "quick" ? "#1d4ed8" : "#6b7280",
+                cursor: "pointer",
+              }}
+            >
+              ⚡ Quick Topic Practice
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("builder")}
+              style={{
+                padding: "8px 16px",
+                borderRadius: "8px",
+                border: "none",
+                fontWeight: 600,
+                fontSize: "14px",
+                backgroundColor: activeTab === "builder" ? "#eff6ff" : "transparent",
+                color: activeTab === "builder" ? "#1d4ed8" : "#6b7280",
+                cursor: "pointer",
+              }}
+            >
+              🛠️ Custom Drill Builder
+            </button>
+          </div>
         </div>
+
+        {activeTab === "builder" ? (
+          <CustomTestBuilder initialExamId={currentExamId} onStartTest={handleStartCustomTest} />
+        ) : (
+          <div className="card" style={{ padding: "28px", borderRadius: "16px", border: "1px solid #e5e7eb" }}>
+            <h2 style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 16px 0" }}>Quick Practice Setup</h2>
+
+            <label htmlFor="practice-exam" style={{ marginBottom: "8px", display: "block", fontWeight: "600", fontSize: "14px" }}>
+              Select Exam
+            </label>
+            <select
+              id="practice-exam"
+              value={selectedExamId}
+              onChange={(e) => {
+                setSelectedExamId(e.target.value);
+                setSelectedTopicId("");
+              }}
+              style={{ marginBottom: "20px", padding: "10px 12px", borderRadius: "8px" }}
+            >
+              <option value="">Choose an exam...</option>
+              {Object.values(EXAMS).map((exam) => (
+                <option key={exam.id} value={exam.id}>
+                  {exam.displayName} {!accessLoading && !hasAccess(exam.id) ? " — 5 free questions/day" : ""}
+                </option>
+              ))}
+            </select>
+
+            {selectedExamId && (
+              <>
+                <label htmlFor="practice-topic" style={{ marginBottom: "8px", display: "block", fontWeight: "600", fontSize: "14px" }}>
+                  Select Topic
+                </label>
+                <select
+                  id="practice-topic"
+                  value={selectedTopicId}
+                  onChange={(e) => setSelectedTopicId(e.target.value)}
+                  style={{ marginBottom: "20px", padding: "10px 12px", borderRadius: "8px" }}
+                >
+                  <option value="">All topics ({curriculum.totalTopics})</option>
+                  {curriculum.sections.map((section) => (
+                    <optgroup key={section.id} label={section.name}>
+                      {section.topics.map((topic) => (
+                        <option key={topic.id} value={topic.id}>
+                          {topic.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+
+                <label htmlFor="practice-difficulty" style={{ marginBottom: "8px", display: "block", fontWeight: "600", fontSize: "14px" }}>
+                  Difficulty Level
+                </label>
+                <select
+                  id="practice-difficulty"
+                  value={difficulty}
+                  onChange={(e) => setDifficulty(Number(e.target.value))}
+                  style={{ marginBottom: "24px", padding: "10px 12px", borderRadius: "8px" }}
+                >
+                  <option value={1}>Level 1 - Foundational</option>
+                  <option value={2}>Level 2 - Standard Test Day</option>
+                  <option value={3}>Level 3 - Advanced & Traps</option>
+                </select>
+
+                <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px" }}>
+                  {selectedTopicId ? (
+                    <>You will practice questions specifically for <strong>{selectedTopicName}</strong>.</>
+                  ) : (
+                    <>You will practice across all {curriculum.totalTopics} curriculum topics.</>
+                  )}
+                </p>
+
+                <button
+                  className="btn-primary"
+                  onClick={startPracticeSession}
+                  style={{ padding: "12px 24px", width: "100%", fontWeight: 600, fontSize: "15px", borderRadius: "8px" }}
+                >
+                  🚀 Start Practice Session
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
     );
   }
 
   return (
-    <div>
-      {showHud && (
-        <div
-          style={{
-            position: "fixed",
-            top: 76,
-            left: 0,
-            right: 0,
-            zIndex: 10,
-            display: "flex",
-            gap: 16,
-            alignItems: "center",
-            padding: "12px 24px",
-            background: "rgba(255, 255, 255, 0.95)",
-            borderBottom: "1px solid var(--border-color)",
-            backdropFilter: "blur(10px)",
-          }}
-        >
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>
-              Progress
-            </div>
-            <div style={{ 
-              height: 4, 
-              background: "#e5e7eb", 
-              borderRadius: 2,
-              overflow: "hidden"
-            }}>
-              <div style={{
-                height: "100%",
-                background: "linear-gradient(90deg, #3b82f6, #8b5cf6)",
-                width: `${((session?.correctCount || 0) / Math.max((session?.correctCount || 0) + (session?.wrongCount || 0) + 5, 10)) * 100}%`,
-                transition: "width 0.3s ease-out"
-              }} />
-            </div>
-          </div>
+    <div style={{ maxWidth: "840px", margin: "0 auto", padding: "24px" }}>
+      {/* Scratchpad Drawer */}
+      <ScratchpadDrawer isOpen={showScratchpad} onClose={() => setShowScratchpad(false)} />
 
-          <span className="badge" style={{ background: "var(--color-success-bg)", color: "#245c27", fontWeight: 600 }}>
+      {/* Floating HUD */}
+      <div
+        style={{
+          position: "sticky",
+          top: "16px",
+          zIndex: 40,
+          display: "flex",
+          gap: "12px",
+          alignItems: "center",
+          padding: "10px 20px",
+          background: "rgba(255, 255, 255, 0.96)",
+          border: "1px solid #e5e7eb",
+          borderRadius: "12px",
+          backdropFilter: "blur(12px)",
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.06)",
+          marginBottom: "24px",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ flex: 1, minWidth: "120px" }}>
+          <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, textTransform: "uppercase" }}>
+            {session?.isTimed ? "Time Remaining" : "Elapsed Time"}
+          </div>
+          <div style={{ fontSize: "16px", fontWeight: 700, color: session?.isTimed && elapsed < 60 ? "#dc2626" : "#111827" }}>
+            ⏱️ {formatElapsed(elapsed)}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <span className="badge" style={{ background: "#dcfce7", color: "#166534", fontWeight: 700 }}>
             ✓ {session?.correctCount || 0}
           </span>
-          <span className="badge" style={{ background: "var(--color-error-bg)", color: "#8c1c26", fontWeight: 600 }}>
+          <span className="badge" style={{ background: "#fee2e2", color: "#991b1b", fontWeight: 700 }}>
             ✗ {session?.wrongCount || 0}
           </span>
-          <span className="timer-badge" style={{ fontWeight: 600 }}>{formatElapsed(elapsed)}</span>
-          {bufferCount > 0 && (
-            <span
-              className="badge"
-              title={`${bufferCount} question${bufferCount === 1 ? "" : "s"} ready to go`}
-              style={{ background: "#dbeafe", color: "#1e40af" }}
-            >
-              ⚡ {bufferCount}
-            </span>
-          )}
+
           <button
-            className="btn-secondary btn-sm"
+            type="button"
+            onClick={() => setShowScratchpad(!showScratchpad)}
+            style={{
+              padding: "6px 12px",
+              fontSize: "13px",
+              fontWeight: 600,
+              borderRadius: "6px",
+              border: "1px solid #93c5fd",
+              backgroundColor: showScratchpad ? "#eff6ff" : "#ffffff",
+              color: "#1d4ed8",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            ✏️ Scratchpad
+          </button>
+
+          <button
+            type="button"
+            className="btn-secondary"
             onClick={quitSession}
-            style={{ padding: "6px 12px" }}
+            style={{ padding: "6px 12px", fontSize: "13px" }}
           >
             Quit
           </button>
         </div>
+      </div>
+
+      {/* Session Title */}
+      {session && (
+        <div style={{ marginBottom: "20px" }}>
+          <span className="badge" style={{ backgroundColor: "#eff6ff", color: "#1d4ed8", fontWeight: 600 }}>
+            {getExam(session.examId)?.displayName} Practice
+          </span>
+          <h2 style={{ margin: "6px 0 0 0", fontSize: "20px", color: "#111827" }}>
+            {session.topics[session.currentTopicIndex]}
+          </h2>
+        </div>
       )}
 
-      <div style={{ marginTop: showHud ? 60 : 0 }}>
-        <h1>Practice Session</h1>
-        {session && (
-          <div style={{ marginBottom: "24px" }}>
-            <p style={{ color: "#6b7280", marginBottom: 8, fontSize: 14 }}>
-              {session.topics.length > 1 && (
-                <>Topic {session.currentTopicIndex + 1} of {session.topics.length}</>
-              )}
-            </p>
-            <h2 style={{ margin: 0, color: "#1f2937" }}>
-              {session.topics[session.currentTopicIndex]}
-            </h2>
-          </div>
-        )}
-
-
-
-
-
       {error && !limitReached && (
-        <div className="alert alert-error fade-in" role="alert">
+        <div className="alert alert-error" role="alert" style={{ marginBottom: "16px" }}>
           {error}
         </div>
       )}
 
       {question && (
-        <div className="card fade-in">
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <span className="badge badge-topic">
-              {session?.topics[session.currentTopicIndex] || "Algebra"}
-            </span>
-            <span className="badge">Difficulty {difficulty}</span>
+        <div className="card" style={{ padding: "28px", borderRadius: "16px", border: "1px solid #e5e7eb" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <span className="badge badge-topic">{question.topic || "Topic Drill"}</span>
+            <button
+              type="button"
+              onClick={() => setIsHighlighted(!isHighlighted)}
+              style={{
+                fontSize: "12px",
+                padding: "4px 8px",
+                borderRadius: "4px",
+                border: "1px solid #d1d5db",
+                backgroundColor: isHighlighted ? "#fef08a" : "#ffffff",
+                color: isHighlighted ? "#854d0e" : "#4b5563",
+                cursor: "pointer",
+              }}
+            >
+              🖍️ {isHighlighted ? "Highlighted" : "Highlight Stem"}
+            </button>
           </div>
+
           {question.passage && (
             <blockquote
               style={{
                 marginTop: 12,
-                padding: "12px 16px",
-                borderLeft: "4px solid var(--color-primary, #3A6EA5)",
-                background: "#f8fafc",
+                padding: "14px 18px",
+                borderLeft: "4px solid #3b82f6",
+                background: isHighlighted ? "#fef9c3" : "#f8fafc",
                 borderRadius: 6,
-                color: "var(--color-text)",
+                color: "#334155",
                 lineHeight: 1.6,
                 whiteSpace: "pre-wrap",
+                fontSize: "15px",
               }}
             >
               {question.passage}
             </blockquote>
           )}
-          <p style={{ fontSize: "1.05rem", color: "var(--color-text)", marginTop: 12 }}>
+
+          <p
+            style={{
+              fontSize: "17px",
+              fontWeight: 600,
+              color: "#111827",
+              marginTop: 12,
+              lineHeight: 1.5,
+              backgroundColor: isHighlighted ? "#fef9c3" : "transparent",
+              padding: isHighlighted ? "8px" : "0",
+              borderRadius: "4px",
+            }}
+          >
             {question.question_text}
           </p>
+
           <VisualAid data={question.visual_aid} />
+
+          {/* Options with Option Strike-Through Elimination */}
           {question.options && (
-            <div className="option-list" role="radiogroup" aria-label="Answer options">
-              {Object.entries(question.options).map(([key, val]) => (
-                <button
-                  key={key}
-                  type="button"
-                  className="option-card"
-                  role="radio"
-                  aria-pressed={answer === key}
-                  aria-checked={answer === key}
-                  onClick={() => !feedback && setAnswer(key)}
-                  disabled={!!feedback}
-                >
-                  <span className="option-key">{key}</span>
-                  <span>{val}</span>
-                </button>
-              ))}
+            <div style={{ display: "grid", gap: "10px", margin: "20px 0" }}>
+              {Object.entries(question.options).map(([key, val]) => {
+                const isSelected = answer === key;
+                const isEliminated = eliminatedOptions[key];
+                return (
+                  <div key={key} style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    <button
+                      type="button"
+                      onClick={() => !feedback && !isEliminated && setAnswer(key)}
+                      disabled={!!feedback}
+                      style={{
+                        flex: 1,
+                        padding: "12px 16px",
+                        borderRadius: "8px",
+                        border: `2px solid ${isSelected ? "#3b82f6" : "#e5e7eb"}`,
+                        backgroundColor: isSelected ? "#eff6ff" : isEliminated ? "#f9fafb" : "#ffffff",
+                        color: isSelected ? "#1e40af" : "#1f2937",
+                        cursor: feedback ? "default" : "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        textAlign: "left",
+                        opacity: isEliminated ? 0.45 : 1,
+                        textDecoration: isEliminated ? "line-through" : "none",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <strong
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          borderRadius: "50%",
+                          backgroundColor: isSelected ? "#3b82f6" : "#f3f4f6",
+                          color: isSelected ? "#ffffff" : "#374151",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "13px",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {key}
+                      </strong>
+                      <span style={{ fontSize: "15px" }}>{val}</span>
+                    </button>
+
+                    {!feedback && (
+                      <button
+                        type="button"
+                        onClick={(e) => toggleElimination(e, key)}
+                        style={{
+                          padding: "8px 10px",
+                          borderRadius: "6px",
+                          border: "1px solid #e5e7eb",
+                          backgroundColor: isEliminated ? "#fee2e2" : "#ffffff",
+                          color: isEliminated ? "#dc2626" : "#9ca3af",
+                          cursor: "pointer",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                        }}
+                        title={isEliminated ? "Restore option" : "Eliminate option (Cross out)"}
+                      >
+                        {isEliminated ? "Undo" : "<s>✕</s>"}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
-          {!question.options && (
-            <>
-              <label htmlFor="practice-answer">Your answer</label>
-              <input
-                id="practice-answer"
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-                placeholder="Your answer"
-                disabled={!!feedback}
-              />
-            </>
-          )}
-          <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
+
+          {/* Action buttons */}
+          <div style={{ display: "flex", gap: "12px", marginTop: "20px" }}>
             <button
               className="btn-primary"
               onClick={() =>
@@ -690,55 +813,38 @@ export default function PracticePage() {
                   : submitAnswer()
               }
               disabled={!answer || submitting || loading}
-              style={{ flex: 1, fontWeight: 600 }}
+              style={{ flex: 1, padding: "12px 20px", fontWeight: 600, fontSize: "15px" }}
             >
               {submitting
                 ? "Submitting..."
                 : !feedback
                 ? "Submit Answer"
                 : isSessionComplete
-                ? "Complete Session ✓"
+                ? "Complete Practice ✓"
                 : "Next Question →"}
             </button>
-            {feedback && !isSessionComplete && (
-              <button
-                className="btn-secondary"
-                onClick={quitSession}
-                style={{ padding: "8px 16px" }}
-              >
-                Quit
-              </button>
-            )}
           </div>
+
+          {/* Feedback & AI Explanation */}
           {feedback && (
             <div
-              className={`alert fade-in ${feedback.startsWith("Correct") ? "alert-success" : "alert-error"}`}
-              style={{ 
-                marginTop: 16,
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                fontSize: 15,
-                fontWeight: 500
+              style={{
+                marginTop: 20,
+                padding: "16px 20px",
+                borderRadius: "10px",
+                backgroundColor: feedback.startsWith("Correct") ? "#f0fdf4" : "#fef2f2",
+                border: `1px solid ${feedback.startsWith("Correct") ? "#86efac" : "#fca5a5"}`,
+                color: feedback.startsWith("Correct") ? "#166534" : "#991b1b",
               }}
-              role="status"
             >
-              <span style={{ fontSize: 20 }}>
-                {feedback.startsWith("Correct") ? "✓" : "✗"}
-              </span>
-              <div>
-                <div>{feedback}</div>
-                {!feedback.startsWith("Correct") && question.explanation && (
-                  <div style={{ fontSize: 13, fontWeight: 400, marginTop: 8, opacity: 0.9 }}>
-                    <strong>Why:</strong> {question.explanation}
-                  </div>
-                )}
+              <div style={{ fontWeight: 700, fontSize: "15px", marginBottom: "6px" }}>
+                {feedback.startsWith("Correct") ? "✓ Correct! Great job." : "✗ Incorrect."}
               </div>
+              <div style={{ fontSize: "14px", lineHeight: "1.5" }}>{feedback}</div>
             </div>
           )}
         </div>
       )}
-      </div>
     </div>
   );
 }

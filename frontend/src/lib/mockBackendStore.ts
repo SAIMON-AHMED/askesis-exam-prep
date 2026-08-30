@@ -19,6 +19,8 @@ export interface MockSettings {
   user_id: string;
   email: string;
   email_notifications: boolean;
+  daily_goal_reminder_enabled?: boolean;
+  daily_goal_reminder_time?: string;
   difficulty_preference: string;
   theme: string;
   language: string;
@@ -79,6 +81,16 @@ export interface MockReviewItem {
   next_review: string;
 }
 
+export interface MockStudyLog {
+  id: string;
+  duration_minutes: number;
+  topic: string;
+  exam_type: string;
+  notes?: string;
+  activity_type?: string;
+  timestamp: string;
+}
+
 export interface MockExamSession {
   id: string;
   exam_type: string;
@@ -118,6 +130,8 @@ class Store {
     user_id: 'user-demo-1',
     email: 'student@askesisprep.com',
     email_notifications: true,
+    daily_goal_reminder_enabled: true,
+    daily_goal_reminder_time: '20:00',
     difficulty_preference: 'adaptive',
     theme: 'system',
     language: 'en',
@@ -141,6 +155,29 @@ class Store {
   purchasedExamIds: Set<string> = new Set(['sat', 'act', 'gre', 'gmat', 'shsat', 'regents']);
 
   questionsTodayCount: number = 12;
+
+  daily_study_goal_hours: number = 2.0;
+  today_study_hours: number = 1.2;
+  studyLogs: MockStudyLog[] = [
+    {
+      id: 'log-1',
+      duration_minutes: 45,
+      topic: 'Heart of Algebra & Systems',
+      exam_type: 'SAT',
+      activity_type: 'Practice Questions',
+      notes: 'Reviewed linear equations and timed problem set.',
+      timestamp: new Date(Date.now() - 4 * 3600000).toISOString(),
+    },
+    {
+      id: 'log-2',
+      duration_minutes: 27,
+      topic: 'Command of Evidence Passages',
+      exam_type: 'SAT',
+      activity_type: 'Reading & Analysis',
+      notes: 'Targeted paired passage comparison.',
+      timestamp: new Date(Date.now() - 1.5 * 3600000).toISOString(),
+    },
+  ];
 
   studyPlans: MockStudyPlan[] = [
     {

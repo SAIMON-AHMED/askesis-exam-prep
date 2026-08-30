@@ -195,6 +195,65 @@ export function useStudyStreak() {
   return { data, loading, error };
 }
 
+export interface HeatmapDay {
+  date: string;
+  day_name: string;
+  day_full: string;
+  study_hours: number;
+  intensity_level: 0 | 1 | 2 | 3 | 4;
+  is_goal_met: boolean;
+  daily_goal_hours: number;
+  questions_answered: number;
+  topics: string[];
+  notes?: string;
+  is_today?: boolean;
+}
+
+export interface ConsistencyWeek {
+  week_number: number;
+  week_label: string;
+  days: HeatmapDay[];
+  total_hours: number;
+  completion_rate: number;
+}
+
+export interface WeeklyConsistencyResponse {
+  current_streak: number;
+  longest_streak: number;
+  weekly_adherence_rate: number;
+  total_active_days: number;
+  total_study_hours_month: number;
+  best_day_of_week: string;
+  weeks: ConsistencyWeek[];
+  current_week_days: HeatmapDay[];
+}
+
+export function useWeeklyConsistency() {
+  const [data, setData] = useState<WeeklyConsistencyResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refetch = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/analytics/weekly-consistency');
+      setData(response.data);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load weekly consistency heatmap');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refetch();
+  }, []);
+
+  return { data, loading, error, refetch };
+}
+
 export async function logAnalyticsEvent(
   eventType: string,
   eventData?: Record<string, any>
