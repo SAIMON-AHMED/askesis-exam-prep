@@ -80,10 +80,6 @@ export const ExamProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
-  if (!mounted) {
-    return <>{children}</>;
-  }
-
   return (
     <ExamContext.Provider
       value={{

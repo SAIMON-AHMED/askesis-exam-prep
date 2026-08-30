@@ -384,15 +384,15 @@ export default function HomePage() {
               <ul style={{ listStyle: "none", padding: 0, lineHeight: 1.8 }}>
                 <li><a href="#" style={{ color: "#e5e7eb", textDecoration: "none" }}>About</a></li>
                 <li><a href="#" style={{ color: "#e5e7eb", textDecoration: "none" }}>Blog</a></li>
-                <li><a href="#" style={{ color: "#e5e7eb", textDecoration: "none" }}>Contact</a></li>
+                <li><a href="mailto:contact@askesisprep.com" style={{ color: "#e5e7eb", textDecoration: "none" }}>Contact Us</a></li>
               </ul>
             </div>
             <div>
-              <h4 style={{ color: "#ffffff", marginBottom: 16, fontWeight: "600" }}>Legal</h4>
+              <h4 style={{ color: "#ffffff", marginBottom: 16, fontWeight: "600" }}>Legal & Support</h4>
               <ul style={{ listStyle: "none", padding: 0, lineHeight: 1.8 }}>
-                <li><a href="#" style={{ color: "#e5e7eb", textDecoration: "none" }}>Privacy</a></li>
-                <li><a href="#" style={{ color: "#e5e7eb", textDecoration: "none" }}>Terms</a></li>
-                <li><a href="#" style={{ color: "#e5e7eb", textDecoration: "none" }}>Support</a></li>
+                <li><a href="#" style={{ color: "#e5e7eb", textDecoration: "none" }}>Privacy Policy</a></li>
+                <li><a href="#" style={{ color: "#e5e7eb", textDecoration: "none" }}>Terms of Service</a></li>
+                <li><a href="mailto:contact@askesisprep.com" style={{ color: "#e5e7eb", textDecoration: "none" }}>Support (contact@askesisprep.com)</a></li>
               </ul>
             </div>
           </div>

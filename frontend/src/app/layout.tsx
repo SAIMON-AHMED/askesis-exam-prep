@@ -76,6 +76,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     contactPoint: {
       "@type": "ContactPoint",
       contactType: "Customer Support",
+      email: "contact@askesisprep.com",
       url: "https://askesisprep.com"
     }
   };
@@ -88,6 +89,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
           strategy="afterInteractive"
+        />
+        <Script
+          src="https://accounts.google.com/gsi/client"
+          strategy="lazyOnload"
         />
       </head>
       <body>

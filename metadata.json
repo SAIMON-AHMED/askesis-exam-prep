@@ -1,0 +1,8 @@
+{
+  "name": "Askesis - Adaptive Exam Prep",
+  "description": "Master standardized exams with AI-adaptive learning, full-length simulations, and personalized study plans for SAT, ACT, GRE, GMAT, SHSAT, and Regents.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

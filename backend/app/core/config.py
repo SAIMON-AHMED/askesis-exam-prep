@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     stripe_publishable_key: str = ""
     stripe_webhook_secret: str = ""
 
+    resend_api_key: str = ""
+    sendgrid_api_key: str = ""
+    email_from: str = "contact@askesisprep.com"
+
     environment: str = "development"
     frontend_origin: str = "http://localhost:3000"
 

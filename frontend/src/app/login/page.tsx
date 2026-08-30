@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,7 +36,20 @@ export default function LoginPage() {
   return (
     <div className="card fade-in" style={{ maxWidth: 400, margin: "48px auto" }}>
       <h1>Log in</h1>
-      <p>Welcome back — pick up where you left off.</p>
+      <p style={{ marginBottom: "20px" }}>Welcome back — pick up where you left off.</p>
+
+      <div style={{ marginBottom: "18px" }}>
+        <GoogleSignInButton mode="signin" onError={(msg) => setError(msg)} />
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", margin: "18px 0", gap: "12px" }}>
+        <div style={{ flex: 1, height: "1px", backgroundColor: "var(--color-border)" }} />
+        <span style={{ fontSize: "12px", color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          or continue with
+        </span>
+        <div style={{ flex: 1, height: "1px", backgroundColor: "var(--color-border)" }} />
+      </div>
+
       <form onSubmit={handleSubmit}>
         <label htmlFor="login-email">Email</label>
         <input
@@ -64,10 +79,10 @@ export default function LoginPage() {
         </button>
       </form>
       <p style={{ marginTop: 16, fontSize: "0.9rem", textAlign: "center" }}>
-        <a href="/forgot-password">Forgot password?</a>
+        <Link href="/forgot-password">Forgot password?</Link>
       </p>
       <p style={{ marginTop: 8, fontSize: "0.9rem", textAlign: "center" }}>
-        Don&apos;t have an account? <a href="/register">Create one</a>
+        Don&apos;t have an account? <Link href="/register">Create one</Link>
       </p>
     </div>
   );

@@ -23,6 +23,23 @@ class PasswordResetRequest(BaseModel):
     new_password: str = Field(min_length=8)
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirmRequest(BaseModel):
+    token: str
+    new_password: str = Field(min_length=8)
+
+
+class GoogleAuthRequest(BaseModel):
+    id_token: str | None = None
+    credential: str | None = None
+    email: EmailStr | None = None
+    name: str | None = None
+    picture: str | None = None
+
+
 class UserOut(BaseModel):
     id: str
     email: EmailStr

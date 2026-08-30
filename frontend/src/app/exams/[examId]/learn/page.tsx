@@ -111,7 +111,7 @@ export default function LearnPage() {
     setEvaluatingEssays(new Set([...evaluatingEssays, question.id]));
 
     try {
-      const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+      const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
       const response = await fetch(`${baseURL}/essay/evaluate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

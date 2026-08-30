@@ -290,6 +290,25 @@ export default function SubscriptionPage() {
               information.
             </p>
           </details>
+
+          <details
+            style={{
+              padding: '16px',
+              border: '1px solid var(--border-color)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+            }}
+          >
+            <summary style={{ fontWeight: '600', cursor: 'pointer' }}>
+              Need help or have questions about billing?
+            </summary>
+            <p style={{ marginTop: '12px', marginBottom: 0, color: 'var(--text-secondary)' }}>
+              Our team is ready to help. Email us anytime at{' '}
+              <a href="mailto:contact@askesisprep.com" style={{ color: 'var(--color-primary, #2563eb)', fontWeight: 600 }}>
+                contact@askesisprep.com
+              </a>.
+            </p>
+          </details>
         </div>
       </section>
 
