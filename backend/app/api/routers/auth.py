@@ -8,7 +8,7 @@ from app.api.deps import get_current_user, oauth2_scheme
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.session import get_db
 from app.models.models import User
-from app.schemas.schemas import TokenResponse, UserLogin, UserOut, UserRegister
+from app.schemas.schemas import PasswordResetRequest, TokenResponse, UserLogin, UserOut, UserRegister
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -41,6 +41,20 @@ def login(payload: UserLogin, db: Session = Depends(get_db)) -> TokenResponse:
 
     token = create_access_token(subject=user.id)
     return TokenResponse(access_token=token)
+
+
+@router.post("/forgot-password")
+def forgot_password(payload: PasswordResetRequest, db: Session = Depends(get_db)) -> dict:
+    """Reset a user's password by email if the account exists."""
+    user = db.query(User).filter(User.email == payload.email).first()
+    if user is None:
+        return {"message": "If an account exists for that email, the password has been reset."}
+
+    user.hashed_password = hash_password(payload.new_password)
+    db.add(user)
+    db.commit()
+    logger.info("Password reset successful for email: %s", payload.email)
+    return {"message": "Password reset successful"}
 
 
 @router.post("/logout")

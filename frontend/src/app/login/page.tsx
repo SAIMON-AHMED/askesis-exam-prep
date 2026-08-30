@@ -63,7 +63,10 @@ export default function LoginPage() {
           {loading ? "Logging in..." : "Log in"}
         </button>
       </form>
-      <p style={{ marginTop: 16, fontSize: "0.9rem" }}>
+      <p style={{ marginTop: 16, fontSize: "0.9rem", textAlign: "center" }}>
+        <a href="/forgot-password">Forgot password?</a>
+      </p>
+      <p style={{ marginTop: 8, fontSize: "0.9rem", textAlign: "center" }}>
         Don&apos;t have an account? <a href="/register">Create one</a>
       </p>
     </div>
