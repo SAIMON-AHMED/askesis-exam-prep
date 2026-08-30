@@ -2,7 +2,11 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 from app.models.models import Subscription, SubscriptionStatus
-from app.services.subscription import expire_expired_trials, expire_trial_if_needed
+from app.services.subscription import (
+    expire_expired_trials,
+    expire_trial_if_needed,
+    is_premium_user,
+)
 
 
 def test_expire_trial_if_needed_marks_expired_trial_as_canceled():
@@ -43,3 +47,22 @@ def test_expire_expired_trials_cancels_every_expired_trial():
     assert expired_1.status == SubscriptionStatus.canceled
     assert expired_2.status == SubscriptionStatus.canceled
     db.commit.assert_called_once()
+
+
+def test_is_premium_user_rejects_expired_trial_even_if_status_is_trialing():
+    subscription = Subscription(
+        user_id="user-123",
+        plan_name="pro",
+        status=SubscriptionStatus.trialing,
+        trial_ends_at=datetime.now(timezone.utc) - timedelta(days=1),
+    )
+    db = MagicMock()
+    db.query.return_value.filter.return_value.all.return_value = []
+    db.query.return_value.filter.return_value.order_by.return_value.first.return_value = subscription
+
+    result = is_premium_user("user-123", db)
+
+    assert result is False
+    assert subscription.status == SubscriptionStatus.canceled
+    db.commit.assert_called_once()
+    db.refresh.assert_called_once_with(subscription)
