@@ -538,27 +538,51 @@ export default function PracticePage() {
           style={{
             position: "fixed",
             top: 76,
-            right: 24,
+            left: 0,
+            right: 0,
             zIndex: 10,
             display: "flex",
-            gap: 8,
+            gap: 16,
             alignItems: "center",
+            padding: "12px 24px",
+            background: "rgba(255, 255, 255, 0.95)",
+            borderBottom: "1px solid var(--border-color)",
+            backdropFilter: "blur(10px)",
           }}
         >
-          <span className="timer-badge">{formatElapsed(elapsed)}</span>
-          <span className="badge" style={{ background: "var(--color-success-bg)", color: "#245c27" }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>
+              Progress
+            </div>
+            <div style={{ 
+              height: 4, 
+              background: "#e5e7eb", 
+              borderRadius: 2,
+              overflow: "hidden"
+            }}>
+              <div style={{
+                height: "100%",
+                background: "linear-gradient(90deg, #3b82f6, #8b5cf6)",
+                width: `${((session?.correctCount || 0) / Math.max((session?.correctCount || 0) + (session?.wrongCount || 0) + 5, 10)) * 100}%`,
+                transition: "width 0.3s ease-out"
+              }} />
+            </div>
+          </div>
+
+          <span className="badge" style={{ background: "var(--color-success-bg)", color: "#245c27", fontWeight: 600 }}>
             ✓ {session?.correctCount || 0}
           </span>
-          <span className="badge" style={{ background: "var(--color-error-bg)", color: "#8c1c26" }}>
+          <span className="badge" style={{ background: "var(--color-error-bg)", color: "#8c1c26", fontWeight: 600 }}>
             ✗ {session?.wrongCount || 0}
           </span>
+          <span className="timer-badge" style={{ fontWeight: 600 }}>{formatElapsed(elapsed)}</span>
           {bufferCount > 0 && (
             <span
               className="badge"
               title={`${bufferCount} question${bufferCount === 1 ? "" : "s"} ready to go`}
-              style={{ background: "#eef2ff", color: "#3730a3" }}
+              style={{ background: "#dbeafe", color: "#1e40af" }}
             >
-              ⚡ {bufferCount} ready
+              ⚡ {bufferCount}
             </span>
           )}
           <button
@@ -571,15 +595,20 @@ export default function PracticePage() {
         </div>
       )}
 
-      <h1>Practice Session</h1>
-      {session && (
-        <p style={{ color: "#6b7280", marginBottom: "24px" }}>
-          {session.topics.length > 1 && (
-            <>Topic {session.currentTopicIndex + 1} of {session.topics.length}: </>
-          )}
-          <strong>{session.topics[session.currentTopicIndex]}</strong>
-        </p>
-      )}
+      <div style={{ marginTop: showHud ? 60 : 0 }}>
+        <h1>Practice Session</h1>
+        {session && (
+          <div style={{ marginBottom: "24px" }}>
+            <p style={{ color: "#6b7280", marginBottom: 8, fontSize: 14 }}>
+              {session.topics.length > 1 && (
+                <>Topic {session.currentTopicIndex + 1} of {session.topics.length}</>
+              )}
+            </p>
+            <h2 style={{ margin: 0, color: "#1f2937" }}>
+              {session.topics[session.currentTopicIndex]}
+            </h2>
+          </div>
+        )}
 
 
 
@@ -684,14 +713,57 @@ export default function PracticePage() {
           {feedback && (
             <div
               className={`alert fade-in ${feedback.startsWith("Correct") ? "alert-success" : "alert-error"}`}
-              style={{ marginTop: 16 }}
+              style={{ 
+                marginTop: 16,
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                fontSize: 15,
+                fontWeight: 500
+              }}
               role="status"
             >
-              {feedback}
+              <span style={{ fontSize: 20 }}>
+                {feedback.startsWith("Correct") ? "✓" : "✗"}
+              </span>
+              <div>
+                <div>{feedback}</div>
+                {!feedback.startsWith("Correct") && question.explanation && (
+                  <div style={{ fontSize: 13, fontWeight: 400, marginTop: 8, opacity: 0.9 }}>
+                    <strong>Why:</strong> {question.explanation}
+                  </div>
+                )}
+              </div>
             </div>
           )}
-        </div>
-      )}
-    </div>
-  );
-}
+          <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
+            <button
+              className="btn-primary"
+              onClick={() =>
+                feedback
+                  ? isSessionComplete
+                    ? quitSession()
+                    : continueToNextQuestion()
+                  : submitAnswer()
+              }
+              disabled={!answer || submitting || loading}
+              style={{ flex: 1, fontWeight: 600 }}
+            >
+              {submitting
+                ? "Submitting..."
+                : !feedback
+                ? "Submit Answer"
+                : isSessionComplete
+                ? "Complete Session ✓"
+                : "Next Question →"}
+            </button>
+            {feedback && !isSessionComplete && (
+              <button
+                className="btn-secondary"
+                onClick={quitSession}
+                style={{ padding: "8px 16px" }}
+              >
+                Quit
+              </button>
+            )}
+          </div>

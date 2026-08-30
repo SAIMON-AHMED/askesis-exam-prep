@@ -69,7 +69,10 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1>Dashboard</h1>
+      <div style={{ marginBottom: 32 }}>
+        <h1 style={{ marginBottom: 8 }}>Welcome back 👋</h1>
+        <p style={{ color: "#6b7280", fontSize: 16 }}>Continue where you left off</p>
+      </div>
 
       {trialReminder && (
         <div
@@ -78,24 +81,35 @@ export default function DashboardPage() {
             borderLeft: `4px solid ${trialReminder.tone === "warning" ? "#f59e0b" : "var(--color-primary)"}`,
             background: trialReminder.tone === "warning" ? "#fff9eb" : "#edf6ff",
             marginBottom: 16,
+            padding: 16,
           }}
         >
-          <h2 className="card-title" style={{ marginBottom: 8 }}>{trialReminder.title}</h2>
-          <p style={{ margin: "0 0 12px" }}>{trialReminder.text}</p>
+          <h2 className="card-title" style={{ marginBottom: 8, fontSize: 18, fontWeight: 600 }}>
+            {trialReminder.title}
+          </h2>
+          <p style={{ margin: "0 0 12px", fontSize: 14, color: "#6b7280" }}>{trialReminder.text}</p>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <Link href="/subscription" className="btn-primary">Upgrade now</Link>
-            <Link href="/subscription" className="btn-secondary">View plans</Link>
+            <Link href="/subscription" className="btn-primary" style={{ padding: "8px 16px", fontSize: 14 }}>
+              Upgrade now
+            </Link>
+            <Link href="/subscription" className="btn-secondary" style={{ padding: "8px 16px", fontSize: 14 }}>
+              View plans
+            </Link>
           </div>
         </div>
       )}
 
       {onboarding && !onboarding.completed && (
-        <div className="card fade-in" style={{ borderLeft: "4px solid #f59e0b", background: "#fff9eb", marginBottom: 16 }}>
-          <h2 className="card-title" style={{ marginBottom: 8 }}>Complete your study setup</h2>
-          <p style={{ margin: "0 0 12px" }}>
+        <div className="card fade-in" style={{ borderLeft: "4px solid #f59e0b", background: "#fff9eb", marginBottom: 16, padding: 16 }}>
+          <h2 className="card-title" style={{ marginBottom: 8, fontSize: 18, fontWeight: 600 }}>
+            📋 Complete your study setup
+          </h2>
+          <p style={{ margin: "0 0 12px", fontSize: 14, color: "#6b7280" }}>
             Tell us your exam date and target score so we can build a better plan for you.
           </p>
-          <Link href="/onboarding" className="btn-primary">Finish onboarding</Link>
+          <Link href="/onboarding" className="btn-primary" style={{ display: "inline-block", padding: "8px 16px", fontSize: 14 }}>
+            Finish onboarding →
+          </Link>
         </div>
       )}
 
