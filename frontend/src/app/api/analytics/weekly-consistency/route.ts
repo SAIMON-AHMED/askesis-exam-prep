@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { mockBackend } from '@/lib/mockBackendStore';
 
 export interface HeatmapDay {
   date: string; // ISO or YYYY-MM-DD
@@ -37,6 +38,65 @@ export async function GET() {
   const today = new Date();
   
   // Generate realistic data for the last 4 weeks leading up to today
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    const goal = mockBackend.daily_study_goal_hours;
+    const days = Array.from({ length: 28 }, (_, index) => {
+      const date = new Date(today);
+      date.setHours(0, 0, 0, 0);
+      date.setDate(today.getDate() - (27 - index));
+      const dateKey = date.toISOString().slice(0, 10);
+      const logs = mockBackend.studyLogs.filter((log) => log.timestamp.slice(0, 10) === dateKey);
+      const hours = logs.reduce((total, log) => total + log.duration_minutes / 60, 0);
+      const weekIndex = Math.floor(index / 7);
+
+      return {
+        date: dateKey,
+        day_name: dayNames[date.getDay()].slice(0, 3),
+        day_full: dayNames[date.getDay()],
+        study_hours: Number(hours.toFixed(2)),
+        intensity_level: hours <= 0 ? 0 : hours < 1 ? 1 : hours < goal ? 2 : hours < goal + 1 ? 3 : 4,
+        is_goal_met: hours >= goal,
+        daily_goal_hours: goal,
+        questions_answered: 0,
+        topics: [...new Set(logs.map((log) => log.topic))],
+        notes: logs.map((log) => log.notes).filter(Boolean).join(' '),
+        is_today: index === 27,
+        weekIndex,
+      };
+    });
+
+    const weeks = Array.from({ length: 4 }, (_, weekIndex) => {
+      const weekDays = days.filter((day) => day.weekIndex === weekIndex);
+      const totalHours = weekDays.reduce((total, day) => total + day.study_hours, 0);
+      return {
+        week_number: weekIndex + 1,
+        week_label: weekIndex === 3 ? 'Current Week' : `${4 - weekIndex} Weeks Ago`,
+        days: weekDays.map(({ weekIndex: _, ...day }) => day),
+        total_hours: Number(totalHours.toFixed(2)),
+        completion_rate: Math.round((weekDays.filter((day) => day.is_goal_met).length / 7) * 100),
+      };
+    });
+    const activeDays = days.filter((day) => day.study_hours > 0);
+    const dayTotals = new Map<string, number>();
+    for (const day of activeDays) dayTotals.set(day.day_full, (dayTotals.get(day.day_full) || 0) + day.study_hours);
+    const bestDay = [...dayTotals.entries()].sort((a, b) => b[1] - a[1])[0];
+
+    let currentStreak = 0;
+    for (let index = days.length - 1; index >= 0 && days[index].study_hours > 0; index -= 1) currentStreak += 1;
+
+    return NextResponse.json({
+      current_streak: currentStreak,
+      longest_streak: currentStreak,
+      weekly_adherence_rate: Math.round((days.filter((day) => day.is_goal_met).length / 28) * 100),
+      total_active_days: activeDays.length,
+      total_study_hours_month: Number(days.reduce((total, day) => total + day.study_hours, 0).toFixed(2)),
+      best_day_of_week: bestDay ? bestDay[0] : 'No study days yet',
+      weeks,
+      current_week_days: weeks[3].days,
+    });
+
+  // Legacy code below is unreachable after the account-specific response above.
   const weeksData: ConsistencyWeek[] = [];
 
   // Data patterns for 4 weeks (Week 1 is 3 weeks ago, Week 4 is current week)

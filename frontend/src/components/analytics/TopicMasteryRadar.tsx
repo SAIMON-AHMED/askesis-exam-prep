@@ -19,19 +19,7 @@ export const TopicMasteryRadar: React.FC<TopicMasteryRadarProps> = ({ data }) =>
   const [filter, setFilter] = useState<'all' | 'weak' | 'mastered'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Fallback high-yield topics if data is empty
-  const defaultTopics: TopicItem[] = [
-    { topic: 'Heart of Algebra & Linear Equations', accuracy: 88, total_questions: 42, time_per_question: 68 },
-    { topic: 'Advanced Math & Quadratics', accuracy: 64, total_questions: 35, time_per_question: 94 },
-    { topic: 'Problem Solving & Data Analysis', accuracy: 82, total_questions: 30, time_per_question: 72 },
-    { topic: 'Geometry & Trigonometry', accuracy: 52, total_questions: 28, time_per_question: 110 },
-    { topic: 'Information & Ideas (Reading)', accuracy: 76, total_questions: 45, time_per_question: 65 },
-    { topic: 'Craft & Structure (Reading)', accuracy: 58, total_questions: 38, time_per_question: 84 },
-    { topic: 'Standard English Conventions', accuracy: 91, total_questions: 50, time_per_question: 45 },
-    { topic: 'Expression of Ideas (Writing)', accuracy: 79, total_questions: 32, time_per_question: 58 },
-  ];
-
-  const topicsList = data && data.length > 0 ? data : defaultTopics;
+  const topicsList = data || [];
 
   const getMasteryCategory = (accuracy: number) => {
     if (accuracy >= 85) return { label: 'Mastered', color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' };
@@ -134,7 +122,11 @@ export const TopicMasteryRadar: React.FC<TopicMasteryRadarProps> = ({ data }) =>
       </div>
 
       {/* Topic Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+      {topicsList.length === 0 ? (
+        <p style={{ margin: 0, padding: '24px', textAlign: 'center', color: '#64748b' }}>
+          Complete practice questions to see your topic mastery data.
+        </p>
+      ) : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
         {filteredTopics.map((item, idx) => {
           const category = getMasteryCategory(item.accuracy);
           return (
@@ -212,7 +204,7 @@ export const TopicMasteryRadar: React.FC<TopicMasteryRadarProps> = ({ data }) =>
             </div>
           );
         })}
-      </div>
+      </div>}
     </div>
   );
 };

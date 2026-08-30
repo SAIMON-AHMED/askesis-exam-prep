@@ -241,10 +241,10 @@ export const WeeklyStudyConsistencyHeatmap: React.FC<WeeklyStudyConsistencyHeatm
           </div>
           <div>
             <div style={{ fontSize: '18px', fontWeight: 800, color: '#92400e' }}>
-              {data?.current_streak || 12} Days
+              {data?.current_streak ?? 0} Days
             </div>
             <div style={{ fontSize: '11px', color: '#b45309', fontWeight: 600 }}>
-              Active Study Streak (Best: {data?.longest_streak || 21}d)
+              Active Study Streak (Best: {data?.longest_streak ?? 0}d)
             </div>
           </div>
         </div>
@@ -279,7 +279,7 @@ export const WeeklyStudyConsistencyHeatmap: React.FC<WeeklyStudyConsistencyHeatm
           </div>
           <div>
             <div style={{ fontSize: '18px', fontWeight: 800, color: '#166534' }}>
-              {data?.weekly_adherence_rate || 94}%
+              {data?.weekly_adherence_rate ?? 0}%
             </div>
             <div style={{ fontSize: '11px', color: '#15803d', fontWeight: 600 }}>
               Weekly Target Adherence
@@ -317,7 +317,7 @@ export const WeeklyStudyConsistencyHeatmap: React.FC<WeeklyStudyConsistencyHeatm
           </div>
           <div>
             <div style={{ fontSize: '18px', fontWeight: 800, color: '#1e40af' }}>
-              {data?.total_study_hours_month || 58.6} hrs
+              {data?.total_study_hours_month ?? 0} hrs
             </div>
             <div style={{ fontSize: '11px', color: '#1d4ed8', fontWeight: 600 }}>
               Past 28 Days Study Total
@@ -355,7 +355,7 @@ export const WeeklyStudyConsistencyHeatmap: React.FC<WeeklyStudyConsistencyHeatm
           </div>
           <div>
             <div style={{ fontSize: '16px', fontWeight: 800, color: '#6b21a8' }}>
-              {data?.best_day_of_week || 'Saturday'}
+              {data?.best_day_of_week || 'No study days yet'}
             </div>
             <div style={{ fontSize: '11px', color: '#7e22ce', fontWeight: 600 }}>
               Peak Performance Day
