@@ -10,6 +10,7 @@ from app.models.models import GeneratedQuestion, Question, User, UserAttempt, Us
 from app.schemas.schemas import PracticeQuotaOut, PracticeSubmitRequest, PracticeSubmitResponse, UserAttemptOut
 from app.services.adaptive_engine import AdaptiveInput, compute_recommendation
 from app.services.subscription import get_practice_quota
+from app.services.review import schedule_review
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/practice", tags=["practice"])
@@ -61,6 +62,16 @@ def submit_attempt(
         topic=payload.topic,
     )
     db.add(attempt)
+    if payload.generated_question_id:
+        schedule_review(
+            db,
+            current_user.id,
+            payload.generated_question_id,
+            question.exam_type,
+            payload.topic,
+            "good" if is_correct else "again",
+            is_correct,
+        )
     db.commit()
 
     # Recompute progress for this topic from last 20 attempts.
@@ -107,6 +118,10 @@ def submit_attempt(
         correct_answer=correct_answer,
         explanation=explanation,
         next_recommended_difficulty=recommendation.next_difficulty,
+        explanation_concept=getattr(question, "topic", None),
+        explanation_steps=[explanation],
+        distractor_explanations=question.distractor_explanations if hasattr(question, "distractor_explanations") else None,
+        common_mistake=(f"Review the {question.topic} concept and compare your choice with the explanation." if not is_correct else None),
     )
 
 

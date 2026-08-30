@@ -1,5 +1,5 @@
 """Unit tests for the adaptive learning engine."""
-from app.services.adaptive_engine import AdaptiveInput, compute_recommendation
+from app.services.adaptive_engine import AdaptiveInput, choose_next_topic, compute_recommendation
 
 
 def test_low_accuracy_decreases_difficulty():
@@ -48,3 +48,25 @@ def test_low_mastery_assigns_more_weak_topic_questions():
     )
     assert result.assign_more_weak_topic_questions is True
     assert result.number_of_questions == 15
+
+
+def test_choose_next_topic_prioritizes_user_weak_topics():
+    topic = choose_next_topic(
+        ["algebra", "geometry"],
+        {
+            "algebra": [{"is_correct": True}, {"is_correct": False}],
+            "geometry": [{"is_correct": True}, {"is_correct": True}],
+        },
+    )
+    assert topic == "algebra"
+
+
+def test_choose_next_topic_falls_back_to_lowest_accuracy_subject():
+    topic = choose_next_topic(
+        [],
+        {
+            "reading": [{"is_correct": True}, {"is_correct": True}],
+            "algebra": [{"is_correct": False}, {"is_correct": False}, {"is_correct": True}],
+        },
+    )
+    assert topic == "algebra"

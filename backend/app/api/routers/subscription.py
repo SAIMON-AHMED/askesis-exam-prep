@@ -132,6 +132,8 @@ def create_subscription(
 ) -> Subscription:
     """Create a Stripe subscription Checkout Session with a three-day trial."""
     try:
+        expire_expired_trials(db)
+
         if payload.plan_name not in SUBSCRIPTION_PLANS:
             raise HTTPException(status_code=400, detail="Invalid plan")
 
@@ -220,6 +222,7 @@ def cancel_subscription(
     db: Session = Depends(get_db),
 ) -> dict:
     """Cancel current subscription (downgrade to free)."""
+    expire_expired_trials(db)
     subscription = get_subscription(current_user.id, db)
 
     # Create a new free subscription

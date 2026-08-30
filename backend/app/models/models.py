@@ -52,6 +52,12 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     total_study_hours: Mapped[float] = mapped_column(Float, default=0.0)
     exams_completed: Mapped[int] = mapped_column(Integer, default=0)
+    primary_exam_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    exam_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    target_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    weekly_study_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
+    weak_topics: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    onboarding_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     attempts: Mapped[list["UserAttempt"]] = relationship(back_populates="user")
@@ -117,6 +123,10 @@ class GeneratedQuestion(Base):
     options: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     correct_answer: Mapped[str] = mapped_column(String(500), nullable=False)
     explanation: Mapped[str] = mapped_column(Text, nullable=False)
+    explanation_concept: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    explanation_steps: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    distractor_explanations: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    common_mistake: Mapped[str | None] = mapped_column(Text, nullable=True)
     validated: Mapped[bool] = mapped_column(Boolean, default=False)
     generation_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     visual_aid: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -143,6 +153,25 @@ class UserAttempt(Base):
 
     user: Mapped["User"] = relationship(back_populates="attempts")
     generated_question: Mapped["GeneratedQuestion | None"] = relationship(back_populates="attempts")
+
+
+class ReviewItem(Base):
+    __tablename__ = "review_items"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    question_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    exam_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    topic: Mapped[str] = mapped_column(String(255), nullable=False)
+    due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    interval_days: Mapped[float] = mapped_column(Float, default=0.0)
+    ease_factor: Mapped[float] = mapped_column(Float, default=2.5)
+    repetitions: Mapped[int] = mapped_column(Integer, default=0)
+    lapses: Mapped[int] = mapped_column(Integer, default=0)
+    last_is_correct: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    last_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped["User"] = relationship()
 
 
 class UserProgress(Base):
@@ -225,6 +254,7 @@ class ExamSession(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
     exam_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    session_type: Mapped[str] = mapped_column(String(30), nullable=False, default="mock")
     duration_seconds: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[ExamSessionStatus] = mapped_column(
         Enum(ExamSessionStatus), default=ExamSessionStatus.in_progress

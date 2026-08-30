@@ -1,10 +1,58 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+
+interface Recommendation {
+  exam_type: string;
+  topic: string;
+  action: string;
+  reason: string;
+  target_difficulty: number;
+  estimated_minutes: number;
+  destination: string;
+}
 
 export default function DashboardPage() {
   const router = useRouter();
+  const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
+  const [subscription, setSubscription] = useState<{ status?: string; trial_ends_at?: string | null } | null>(null);
+  const [onboarding, setOnboarding] = useState<{ completed?: boolean } | null>(null);
+
+  useEffect(() => {
+    Promise.allSettled([
+      api.get("/recommendations/next"),
+      api.get("/subscription/me"),
+      api.get("/onboarding"),
+    ]).then(([recommendationResult, subscriptionResult, onboardingResult]) => {
+      if (recommendationResult.status === "fulfilled") {
+        setRecommendation(recommendationResult.value.data);
+      }
+      if (subscriptionResult.status === "fulfilled") {
+        setSubscription(subscriptionResult.value.data);
+      }
+      if (onboardingResult.status === "fulfilled") {
+        setOnboarding(onboardingResult.value.data);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const trialEndsAt = subscription?.trial_ends_at ? new Date(subscription.trial_ends_at) : null;
+  const trialRemainingMs = trialEndsAt ? trialEndsAt.getTime() - Date.now() : 0;
+  const trialRemainingDays = trialRemainingMs > 0 ? Math.ceil(trialRemainingMs / (1000 * 60 * 60 * 24)) : 0;
+  const trialLabel = trialRemainingDays > 1 ? `${trialRemainingDays} days` : trialRemainingDays === 1 ? "1 day" : "today";
+  const trialReminder =
+    subscription?.status === "trialing" && trialEndsAt && trialRemainingMs > 0
+      ? trialRemainingDays <= 1
+        ? { title: "Your trial ends today", text: "Upgrade before midnight to keep full access to premium features.", tone: "warning" }
+        : trialRemainingDays <= 2
+          ? { title: "Your trial is almost over", text: `You have ${trialLabel} left in your trial. Upgrade now to keep your access.`, tone: "info" }
+          : { title: "Your trial is still active", text: `You have ${trialLabel} left in your premium trial. Upgrade before it ends to keep full access.`, tone: "info" }
+      : subscription && subscription.plan_name !== "free" && subscription.status === "canceled"
+        ? { title: "Your trial has expired", text: "Your premium trial ended. Upgrade to keep full access and continue your progress.", tone: "warning" }
+        : null;
 
   const clickableCard = (href: string) => ({
     role: "link" as const,
@@ -22,10 +70,50 @@ export default function DashboardPage() {
   return (
     <div>
       <h1>Dashboard</h1>
+
+      {trialReminder && (
+        <div
+          className="card fade-in"
+          style={{
+            borderLeft: `4px solid ${trialReminder.tone === "warning" ? "#f59e0b" : "var(--color-primary)"}`,
+            background: trialReminder.tone === "warning" ? "#fff9eb" : "#edf6ff",
+            marginBottom: 16,
+          }}
+        >
+          <h2 className="card-title" style={{ marginBottom: 8 }}>{trialReminder.title}</h2>
+          <p style={{ margin: "0 0 12px" }}>{trialReminder.text}</p>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <Link href="/subscription" className="btn-primary">Upgrade now</Link>
+            <Link href="/subscription" className="btn-secondary">View plans</Link>
+          </div>
+        </div>
+      )}
+
+      {onboarding && !onboarding.completed && (
+        <div className="card fade-in" style={{ borderLeft: "4px solid #f59e0b", background: "#fff9eb", marginBottom: 16 }}>
+          <h2 className="card-title" style={{ marginBottom: 8 }}>Complete your study setup</h2>
+          <p style={{ margin: "0 0 12px" }}>
+            Tell us your exam date and target score so we can build a better plan for you.
+          </p>
+          <Link href="/onboarding" className="btn-primary">Finish onboarding</Link>
+        </div>
+      )}
+
       <div className="card fade-in">
         <h2 className="card-title">Welcome back</h2>
         <p>Pick up where you left off, or jump straight into a practice session.</p>
       </div>
+
+      {recommendation && (
+        <section className="card fade-in" style={{ borderLeft: "4px solid var(--color-primary)" }}>
+          <span className="badge">Recommended next</span>
+          <h2 style={{ marginTop: 8 }}>{recommendation.action === "diagnostic" ? "Find your starting point" : recommendation.topic || "Review your progress"}</h2>
+          <p>{recommendation.reason} About {recommendation.estimated_minutes} minutes.</p>
+          <button className="btn-primary" type="button" onClick={() => router.push(recommendation.destination)}>
+            {recommendation.action === "diagnostic" ? "Take diagnostic" : `Start ${recommendation.action}`}
+          </button>
+        </section>
+      )}
 
       <div className="grid-2">
         <div className="card card-link" {...clickableCard("/analytics")}>

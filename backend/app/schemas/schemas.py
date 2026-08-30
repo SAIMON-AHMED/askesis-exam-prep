@@ -28,6 +28,82 @@ class UserOut(BaseModel):
         from_attributes = True
 
 
+class OnboardingOut(BaseModel):
+    primary_exam_id: str | None = None
+    exam_date: datetime | None = None
+    target_score: int | None = None
+    weekly_study_hours: float | None = None
+    weak_topics: list[str] = []
+    completed: bool = False
+
+
+class OnboardingUpdate(BaseModel):
+    primary_exam_id: str | None = None
+    exam_date: datetime | None = None
+    target_score: int | None = Field(default=None, ge=1)
+    weekly_study_hours: float | None = Field(default=None, ge=0, le=168)
+    weak_topics: list[str] = Field(default_factory=list)
+
+
+class DiagnosticStartRequest(BaseModel):
+    exam_type: str
+    topics: list[str] = Field(default_factory=list)
+    number_of_questions: int = Field(default=5, ge=5, le=10)
+
+
+class DiagnosticSubmitRequest(BaseModel):
+    answers: dict[str, str] = Field(default_factory=dict)
+
+
+class DiagnosticTopicResult(BaseModel):
+    topic: str
+    correct: int
+    total: int
+    accuracy: float
+
+
+class DiagnosticResultOut(BaseModel):
+    session_id: str
+    exam_type: str
+    raw_score: int
+    total_questions: int
+    recommended_difficulty: int
+    topic_results: list[DiagnosticTopicResult]
+    weak_topics: list[str]
+
+
+class RecommendationOut(BaseModel):
+    exam_type: str
+    topic: str
+    action: str
+    reason: str
+    target_difficulty: int
+    estimated_minutes: int
+    destination: str
+
+
+class ReviewItemOut(BaseModel):
+    id: str
+    question_key: str
+    exam_type: str
+    topic: str
+    due_at: datetime
+    interval_days: float
+    repetitions: int
+    last_is_correct: bool | None
+    question_text: str | None = None
+    options: dict | None = None
+    correct_answer: str | None = None
+    explanation: str | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class ReviewAnswerRequest(BaseModel):
+    rating: str = Field(pattern="^(again|hard|good|easy)$")
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -54,6 +130,10 @@ class GeneratedQuestionOut(BaseModel):
     explanation: str
     validated: bool
     visual_aid: dict | None = None
+    explanation_concept: str | None = None
+    explanation_steps: list[str] | None = None
+    distractor_explanations: dict[str, str] | None = None
+    common_mistake: str | None = None
 
     class Config:
         from_attributes = True
@@ -74,6 +154,10 @@ class PracticeSubmitResponse(BaseModel):
     correct_answer: str
     explanation: str
     next_recommended_difficulty: int
+    explanation_concept: str | None = None
+    explanation_steps: list[str] | None = None
+    distractor_explanations: dict[str, str] | None = None
+    common_mistake: str | None = None
 
 
 class UserAttemptOut(BaseModel):

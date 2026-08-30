@@ -18,7 +18,12 @@ export default function LoginPage() {
     try {
       const res = await api.post("/auth/login", { email, password });
       window.localStorage.setItem("access_token", res.data.access_token);
-      router.push("/dashboard");
+      try {
+        const onboarding = await api.get("/onboarding");
+        router.push(onboarding.data.completed ? "/dashboard" : "/onboarding");
+      } catch {
+        router.push("/dashboard");
+      }
     } catch (err) {
       setError("Invalid email or password.");
     } finally {

@@ -16,6 +16,36 @@ export default function SubscriptionPage() {
   const [buyingExamId, setBuyingExamId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
 
+  const trialEndsAt = subscription?.trial_ends_at ? new Date(subscription.trial_ends_at) : null;
+  const trialRemainingMs = trialEndsAt ? trialEndsAt.getTime() - Date.now() : 0;
+  const trialRemainingDays = trialRemainingMs > 0 ? Math.ceil(trialRemainingMs / (1000 * 60 * 60 * 24)) : 0;
+  const trialReminder =
+    subscription?.status === 'trialing' && trialEndsAt && trialRemainingMs > 0
+      ? trialRemainingDays <= 1
+        ? {
+            title: 'Your trial ends today',
+            text: 'Upgrade before midnight to keep your premium access and continue where you left off.',
+            tone: 'warning' as const,
+          }
+        : trialRemainingDays <= 2
+          ? {
+              title: 'Your trial is almost over',
+              text: `You have ${trialRemainingDays} days left in your free trial. Upgrade now to keep full access.`,
+              tone: 'info' as const,
+            }
+          : {
+              title: 'Your trial is still active',
+              text: `You have ${trialRemainingDays} days left in your premium trial. Upgrade anytime to continue without interruption.`,
+              tone: 'info' as const,
+            }
+      : subscription && subscription.status === 'canceled' && subscription.plan_name !== 'free'
+        ? {
+            title: 'Your trial has expired',
+            text: 'Your trial ended, but you can still upgrade to keep your progress, study plan, and premium features.',
+            tone: 'warning' as const,
+          }
+        : null;
+
   const handleBuyExam = async (examId: string) => {
     if (!isLoggedIn) {
       router.push('/login');
@@ -93,6 +123,25 @@ export default function SubscriptionPage() {
           Choose a plan that works for your study needs
         </p>
       </div>
+
+      {trialReminder && (
+        <div
+          className="card"
+          style={{
+            padding: '16px',
+            marginBottom: 'var(--space-6)',
+            backgroundColor: trialReminder.tone === 'warning' ? '#fff9eb' : '#edf6ff',
+            borderLeft: `4px solid ${trialReminder.tone === 'warning' ? '#f59e0b' : 'var(--primary-color)'}`,
+          }}
+        >
+          <p style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>{trialReminder.title}</p>
+          <p style={{ margin: '8px 0 0', fontSize: '14px', color: 'var(--text-secondary)' }}>{trialReminder.text}</p>
+          <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
+            <button className="btn-primary" type="button" onClick={() => router.push('/subscription')}>Upgrade now</button>
+            <button className="btn-secondary" type="button" onClick={() => router.push('/dashboard')}>Back to dashboard</button>
+          </div>
+        </div>
+      )}
 
       {/* Current Subscription Info */}
       {subscription && (

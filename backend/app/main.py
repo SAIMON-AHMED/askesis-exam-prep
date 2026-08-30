@@ -1,4 +1,6 @@
 """FastAPI application entrypoint."""
+import asyncio
+import contextlib
 import logging
 from contextlib import asynccontextmanager
 
@@ -7,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from app.api.routers import auth, exam, practice, progress, questions, study_plan, subscription, analytics, profile, admin, essay, ai_assistant, purchases
+from app.api.routers import auth, exam, practice, progress, questions, study_plan, subscription, analytics, profile, admin, essay, ai_assistant, purchases, onboarding, diagnostic, review, recommendations
 from app.core.config import get_settings
 from app.core.error_handlers import register_error_handlers
 
@@ -18,7 +20,7 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Seed the curated question bank so mock tests are ready without a manual step."""
+    """Seed the curated question bank and keep expired trials clean while the app runs."""
     try:
         from app.db.session import SessionLocal
         from app.services.question_bank import seed_question_bank
@@ -31,7 +33,32 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         # Never block startup on seeding; exams fall back to live generation.
         logger.warning("Question bank seeding skipped: %s", exc)
-    yield
+
+    async def cleanup_expired_trials() -> None:
+        """Periodically cancel expired trial subscriptions in the background."""
+        while True:
+            try:
+                from app.db.session import SessionLocal
+                from app.services.subscription import expire_expired_trials
+
+                db = SessionLocal()
+                try:
+                    expired_count = expire_expired_trials(db)
+                    if expired_count:
+                        logger.info("Expired %s trial subscriptions", expired_count)
+                finally:
+                    db.close()
+            except Exception as exc:
+                logger.exception("Background trial cleanup failed: %s", exc)
+            await asyncio.sleep(300)
+
+    cleanup_task = asyncio.create_task(cleanup_expired_trials())
+    try:
+        yield
+    finally:
+        cleanup_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await cleanup_task
 
 
 app = FastAPI(title="Askesis API", version="0.1.0", lifespan=lifespan)
@@ -76,6 +103,10 @@ app.include_router(profile.router)
 app.include_router(exam.router)
 app.include_router(admin.router)
 app.include_router(ai_assistant.router)
+app.include_router(onboarding.router)
+app.include_router(diagnostic.router)
+app.include_router(review.router)
+app.include_router(recommendations.router)
 
 # Register error handlers
 register_error_handlers(app)
