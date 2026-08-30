@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
 import AppFrame from "@/components/AppFrame";
 import AIAssistantPanel from "@/components/AIAssistantPanel";
 import { ExamProvider } from "@/context/ExamContext";
@@ -99,6 +100,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </AssistantProvider>
           </NotificationProvider>
         </ExamProvider>
+        <Analytics />
       </body>
     </html>
   );

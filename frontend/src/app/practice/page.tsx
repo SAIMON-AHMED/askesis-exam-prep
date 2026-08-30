@@ -679,37 +679,6 @@ export default function PracticePage() {
               />
             </>
           )}
-          <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
-            <button
-              className="btn-primary"
-              onClick={() =>
-                feedback
-                  ? isSessionComplete
-                    ? quitSession()
-                    : continueToNextQuestion()
-                  : submitAnswer()
-              }
-              disabled={!answer || submitting || loading}
-              style={{ flex: 1 }}
-            >
-              {submitting
-                ? "Submitting..."
-                : !feedback
-                ? "Submit Answer"
-                : isSessionComplete
-                ? "Complete Session"
-                : "Next Question"}
-            </button>
-            {feedback && !isSessionComplete && (
-              <button
-                className="btn-secondary"
-                onClick={quitSession}
-                style={{ padding: "8px 16px" }}
-              >
-                Quit
-              </button>
-            )}
-          </div>
           {feedback && (
             <div
               className={`alert fade-in ${feedback.startsWith("Correct") ? "alert-success" : "alert-error"}`}
@@ -767,3 +736,9 @@ export default function PracticePage() {
               </button>
             )}
           </div>
+        </div>
+      )}
+      </div>
+    </div>
+  );
+}
