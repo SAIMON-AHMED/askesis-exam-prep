@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from app.api.routers import auth, exam, practice, progress, questions, study_plan, subscription, analytics, profile, admin, essay, ai_assistant, purchases, onboarding, diagnostic, review, recommendations
+from app.api.routers import auth, exam, practice, progress, questions, study_plan, subscription, analytics, profile, admin, essay, ai_assistant, purchases, onboarding, diagnostic, review, recommendations, health
 from app.core.config import get_settings
 from app.core.error_handlers import register_error_handlers
 
@@ -107,6 +107,7 @@ app.include_router(onboarding.router)
 app.include_router(diagnostic.router)
 app.include_router(review.router)
 app.include_router(recommendations.router)
+app.include_router(health.router)
 
 # Register error handlers
 register_error_handlers(app)
