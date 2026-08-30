@@ -4,32 +4,31 @@ import { mockBackend } from '@/lib/mockBackendStore';
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
-    let email = body.email;
-    let name = body.name || body.full_name;
+    const credential = body.credential;
+    const clientId = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
-    // Handle Google Identity Services JWT credential if provided
-    if (body.credential && typeof body.credential === 'string') {
-      try {
-        const parts = body.credential.split('.');
-        if (parts.length === 3) {
-          const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-          const decodedJson = Buffer.from(payloadBase64, 'base64').toString('utf8');
-          const payload = JSON.parse(decodedJson);
-          if (payload.email) {
-            email = payload.email;
-          }
-          if (payload.name) {
-            name = payload.name;
-          }
-        }
-      } catch (err) {
-        console.warn('Failed to parse Google JWT credential payload, falling back to body fields', err);
-      }
+    if (!clientId || typeof credential !== 'string') {
+      return NextResponse.json(
+        { detail: 'Google authentication is not configured.' },
+        { status: 503 },
+      );
     }
 
-    // Default fallback if no email specified
-    const finalEmail = email || 'google.user@example.com';
-    const finalName = name || (finalEmail.split('@')[0].replace(/[._]/g, ' ') || 'Google User');
+    const tokenResponse = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`,
+      { cache: 'no-store' },
+    );
+    if (!tokenResponse.ok) {
+      return NextResponse.json({ detail: 'Invalid Google credential.' }, { status: 401 });
+    }
+
+    const token = await tokenResponse.json();
+    if (token.aud !== clientId || token.email_verified !== 'true' || !token.email) {
+      return NextResponse.json({ detail: 'Google credential verification failed.' }, { status: 401 });
+    }
+
+    const finalEmail = token.email;
+    const finalName = token.name || finalEmail.split('@')[0].replace(/[._]/g, ' ') || 'Google User';
 
     mockBackend.user.email = finalEmail;
     mockBackend.user.full_name = finalName;
