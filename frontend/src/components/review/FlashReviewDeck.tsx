@@ -225,10 +225,11 @@ export const FlashReviewDeck: React.FC<FlashReviewDeckProps> = ({ items, onRate,
                 }
 
                 return (
-                  <div
+                  <button
                     key={key}
+                    type="button"
                     onClick={() => {
-                      if (mode === 'quiz') {
+                      if (!selectedQuizOption) {
                         setSelectedQuizOption(key);
                         setIsFlipped(true);
                       }
@@ -240,17 +241,19 @@ export const FlashReviewDeck: React.FC<FlashReviewDeckProps> = ({ items, onRate,
                       backgroundColor: bg,
                       color: textCol,
                       fontSize: '15px',
-                      cursor: mode === 'quiz' && !selectedQuizOption ? 'pointer' : 'default',
+                      cursor: !selectedQuizOption ? 'pointer' : 'default',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '10px',
                       transition: 'all 0.15s ease',
+                      textAlign: 'left',
+                      width: '100%',
                     }}
                   >
                     <strong style={{ minWidth: '24px' }}>{key}.</strong>
                     <span style={{ flex: 1 }}>{val}</span>
                     {isFlipped && isCorrect && <span style={{ color: '#10b981', fontWeight: 700 }}>✓ Correct</span>}
-                  </div>
+                  </button>
                 );
               })}
             </div>

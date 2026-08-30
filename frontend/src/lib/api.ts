@@ -1,7 +1,12 @@
 import axios from "axios";
 
+const configuredBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+const baseURL = configuredBaseUrl && !/^https?:\/\/localhost(?::\d+)?(?:\/|$)/i.test(configuredBaseUrl)
+  ? configuredBaseUrl
+  : "/api";
+
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || "/api",
+  baseURL,
 });
 
 api.interceptors.request.use((config) => {

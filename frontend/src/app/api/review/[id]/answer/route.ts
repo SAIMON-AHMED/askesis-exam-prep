@@ -8,12 +8,15 @@ export async function POST(
   try {
     const { id } = await params;
     const body = await request.json().catch(() => ({}));
-    const rating = body.rating || 3;
+    const rating = body.rating || 'good';
+    const quality = typeof rating === 'number'
+      ? rating
+      : ({ again: 1, hard: 2, good: 3, easy: 4 } as Record<string, number>)[rating] ?? 3;
 
     const item = mockBackend.reviewItems.find((r) => r.id === id);
     if (item) {
       item.repetition_count += 1;
-      item.interval_days = Math.max(1, item.interval_days * (rating >= 3 ? 2 : 1));
+      item.interval_days = Math.max(1, item.interval_days * (quality >= 3 ? 2 : 1));
       item.next_review = new Date(Date.now() + item.interval_days * 86400000).toISOString();
     }
 
