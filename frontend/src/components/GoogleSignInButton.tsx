@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { ButtonSpinner } from "@/components/ui/ButtonSpinner";
 
 interface GoogleSignInButtonProps {
   mode?: "signin" | "signup";
@@ -155,17 +156,7 @@ export function GoogleSignInButton({
         }}
       >
         {loading ? (
-          <span
-            style={{
-              display: "inline-block",
-              width: "18px",
-              height: "18px",
-              border: "2px solid #dadce0",
-              borderTopColor: "#4285F4",
-              borderRadius: "50%",
-              animation: "spin 0.8s linear infinite",
-            }}
-          />
+          <ButtonSpinner size={18} color="#4285F4" />
         ) : (
           <svg
             width="18"

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { DailyStudyGoalCard } from "@/components/dashboard/DailyStudyGoalCard";
 
 interface Recommendation {
   exam_type: string;
@@ -112,6 +113,9 @@ export default function DashboardPage() {
           </Link>
         </div>
       )}
+
+      {/* Daily Study Goal Progress Tracker & Time Logger */}
+      <DailyStudyGoalCard />
 
       <div className="card fade-in">
         <h2 className="card-title">Welcome back</h2>

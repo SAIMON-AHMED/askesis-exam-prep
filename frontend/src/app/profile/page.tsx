@@ -25,6 +25,7 @@ export default function ProfilePage() {
   const [theme, setTheme] = useState('light');
   const [language, setLanguage] = useState('en');
   const [emailNotifications, setEmailNotifications] = useState(true);
+  const [dailyGoalReminder, setDailyGoalReminder] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   React.useEffect(() => {
@@ -44,6 +45,9 @@ export default function ProfilePage() {
       setTheme(settings.theme || 'light');
       setLanguage(settings.language || 'en');
       setEmailNotifications(settings.email_notifications);
+      if (typeof settings.daily_goal_reminder_enabled === 'boolean') {
+        setDailyGoalReminder(settings.daily_goal_reminder_enabled);
+      }
     }
   }, [settings]);
 
@@ -125,7 +129,12 @@ export default function ProfilePage() {
   };
 
   const handleSaveSettings = async () => {
-    await updateSettings({ theme, language, email_notifications: emailNotifications });
+    await updateSettings({
+      theme,
+      language,
+      email_notifications: emailNotifications,
+      daily_goal_reminder_enabled: dailyGoalReminder,
+    });
   };
 
   return (
@@ -336,6 +345,18 @@ export default function ProfilePage() {
                     style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                   />
                   <span>Email notifications</span>
+                </label>
+              </div>
+
+              <div style={{ marginBottom: 'var(--space-4)' }}>
+                <label style={{ display: 'flex', gap: '8px', alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={dailyGoalReminder}
+                    onChange={(e) => setDailyGoalReminder(e.target.checked)}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <span>8:00 PM Daily study goal push notification reminder</span>
                 </label>
               </div>
 

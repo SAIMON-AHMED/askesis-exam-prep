@@ -15,6 +15,8 @@ export interface UserSettings {
   user_id: string;
   email: string;
   email_notifications: boolean;
+  daily_goal_reminder_enabled?: boolean;
+  daily_goal_reminder_time?: string;
   difficulty_preference: string;
   theme: string;
   language: string;
