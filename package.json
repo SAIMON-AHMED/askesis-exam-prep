@@ -1,0 +1,18 @@
+{
+  "name": "askesis-exam-prep",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=frontend",
+    "build": "npm run build --workspace=frontend",
+    "start": "npm run start --workspace=frontend",
+    "lint": "npm run lint --workspace=frontend"
+  },
+  "dependencies": {
+    "@google/genai": "^2.19.0",
+    "katex": "^0.18.4"
+  }
+}

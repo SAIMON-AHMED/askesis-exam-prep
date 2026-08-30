@@ -16,7 +16,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
     """Restrict access to users on the admin allowlist."""
-    admin_emails = {"admin@askesis.com"}  # Configurable list
+    admin_emails = {"admin@askesis.com", "contact@askesisprep.com"}  # Configurable list
     if current_user.email not in admin_emails:
         raise AuthorizationException("Admin access required")
     return current_user
