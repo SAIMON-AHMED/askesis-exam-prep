@@ -6,6 +6,11 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { DailyStudyGoalCard } from "@/components/dashboard/DailyStudyGoalCard";
 import { TestDayCountdownCard } from "@/components/dashboard/TestDayCountdownCard";
+import {
+  ActiveStudyPlan,
+  StudyPlanTask,
+  normalizeActiveStudyPlan,
+} from "@/lib/studyPlan";
 
 interface Recommendation {
   exam_type: string;
@@ -31,36 +36,6 @@ interface TopicPerformance {
   average_time_per_question: number;
   predicted_score_low: number;
   predicted_score_high: number;
-}
-
-interface StudyPlanTask {
-  day: string;
-  task_key: string;
-  task_title: string;
-  topic: string;
-  duration_minutes: number;
-  completed: boolean;
-}
-
-interface StudyPlanWeek {
-  week_number: number;
-  theme: string;
-  days: StudyPlanTask[];
-}
-
-interface ActiveStudyPlan {
-  id: string;
-  exam_id: string;
-  target_date: string;
-  target_score: number;
-  weekly_hours: number;
-  is_active: boolean;
-  plan_json: {
-    title: string;
-    description: string;
-    weeks: StudyPlanWeek[];
-  };
-  completed_tasks: string[];
 }
 
 interface UserProfile {
@@ -181,7 +156,7 @@ export default function DashboardPage() {
         setTopicPerformance(topicsRes.value.data);
       }
       if (planRes.status === "fulfilled" && planRes.value.data) {
-        setActivePlan(planRes.value.data);
+        setActivePlan(normalizeActiveStudyPlan(planRes.value.data));
       }
     } catch {
       // Continue with current state
@@ -255,9 +230,9 @@ export default function DashboardPage() {
   let nextScheduledTask: (StudyPlanTask & { weekNumber: number; weekTheme: string }) | null = null;
   const upcomingQueue: Array<StudyPlanTask & { weekNumber: number; weekTheme: string }> = [];
 
-  if (activePlan?.plan_json?.weeks) {
+  if (Array.isArray(activePlan?.plan_json?.weeks)) {
     for (const week of activePlan.plan_json.weeks) {
-      for (const day of week.days) {
+      for (const day of Array.isArray(week.days) ? week.days : []) {
         totalPlanTasks++;
         const isDone = day.completed || activePlan.completed_tasks?.includes(day.task_key);
         if (isDone) {
