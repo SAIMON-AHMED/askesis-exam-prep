@@ -67,6 +67,18 @@ class OnboardingUpdate(BaseModel):
     weak_topics: list[str] = Field(default_factory=list)
 
 
+class UserSettingsUpdate(BaseModel):
+    email_notifications: bool | None = None
+    daily_goal_reminder_enabled: bool | None = None
+    daily_goal_reminder_time: str | None = None
+    difficulty_preference: str | None = None
+    theme: str | None = None
+    language: str | None = None
+    exam_date: datetime | None = None
+    target_exam: str | None = None
+    target_score: int | None = Field(default=None, ge=1)
+
+
 class DiagnosticStartRequest(BaseModel):
     exam_type: str
     topics: list[str] = Field(default_factory=list)

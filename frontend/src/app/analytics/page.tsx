@@ -33,6 +33,7 @@ import {
   useStudyStreak,
 } from '@/hooks/useAnalytics';
 import { useUserSettings } from '@/hooks/useProfile';
+import { useExam } from '@/context/ExamContext';
 
 export default function AnalyticsPage() {
   const { data: overview } = useAnalyticsOverview();
@@ -42,12 +43,19 @@ export default function AnalyticsPage() {
   const { data: weeklyStats, loading: weeklyLoading } = useWeeklyStats();
   const { data: streak } = useStudyStreak();
   const { settings: userSettings } = useUserSettings();
+  const { selectedExam } = useExam();
 
   const [showReportModal, setShowReportModal] = useState(false);
 
   const avgScore = overview?.average_score ?? 0;
   const studyHours = overview?.total_study_hours ?? 0;
   const examsCount = overview?.exams_completed ?? 0;
+  const activeExam = (
+    selectedExam?.id ||
+    userSettings?.target_exam ||
+    examHistory[0]?.exam_type ||
+    'SAT'
+  ).toUpperCase();
 
   // Calculate dynamic pacing from topic performance data if available
   const avgSeconds =
@@ -64,7 +72,7 @@ export default function AnalyticsPage() {
       <DiagnosticReportModal
         isOpen={showReportModal}
         onClose={() => setShowReportModal(false)}
-        examType="SAT"
+        examType={activeExam}
         averageScore={avgScore}
         totalHours={studyHours}
         examsCompleted={examsCount}
@@ -115,7 +123,7 @@ export default function AnalyticsPage() {
           averageScore={avgScore}
           examsCompleted={examsCount}
           totalHours={studyHours}
-          primaryExam="SAT"
+          primaryExam={activeExam}
           targetScore={userSettings?.target_score}
         />
       </section>

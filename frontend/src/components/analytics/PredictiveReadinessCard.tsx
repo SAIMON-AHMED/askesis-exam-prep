@@ -53,11 +53,12 @@ export const PredictiveReadinessCard: React.FC<PredictiveReadinessProps> = ({
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
   useEffect(() => {
-    if (targetScore && targetScore > 0) {
-      setCurrentTarget(targetScore);
-      setEditInput(targetScore);
-    }
-  }, [targetScore]);
+    const examBounds = getExamBounds(primaryExam);
+    const validSavedTarget = targetScore && targetScore >= examBounds.min && targetScore <= examBounds.max;
+    const nextTarget = validSavedTarget ? targetScore : getDefaultTarget(primaryExam);
+    setCurrentTarget(nextTarget);
+    setEditInput(nextTarget);
+  }, [primaryExam, targetScore]);
 
   // Calculate scaled predictive score based on exam format
   const getScaledPrediction = (exam: string, scorePercent: number) => {

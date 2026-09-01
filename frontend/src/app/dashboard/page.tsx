@@ -106,7 +106,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [subscription, setSubscription] = useState<{ status?: string; plan_name?: string; trial_ends_at?: string | null } | null>(null);
-  const [onboarding, setOnboarding] = useState<{ completed?: boolean; exam_date?: string; target_score?: number } | null>(null);
+  const [onboarding, setOnboarding] = useState<{ completed?: boolean; primary_exam_id?: string; exam_date?: string; target_score?: number } | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsOverview | null>(null);
   const [topicPerformance, setTopicPerformance] = useState<TopicPerformance[]>([]);
@@ -285,6 +285,7 @@ export default function DashboardPage() {
   });
 
   const nextStudyLink = nextScheduledTask ? getStudyMaterialLink(nextScheduledTask, activePlan?.exam_id || "sat") : "/practice";
+  const dashboardExamId = activePlan?.exam_id || onboarding?.primary_exam_id || "sat";
 
   return (
     <div style={{ maxWidth: "1200px", margin: "0 auto", paddingBottom: "48px" }}>
@@ -432,7 +433,7 @@ export default function DashboardPage() {
       <div style={{ marginBottom: "24px" }}>
         <TestDayCountdownCard
           initialExamDate={onboarding?.exam_date}
-          initialTargetExam={activePlan?.exam_id || "SAT"}
+          initialTargetExam={dashboardExamId}
           initialTargetScore={activePlan?.target_score || onboarding?.target_score}
         />
       </div>
@@ -470,7 +471,7 @@ export default function DashboardPage() {
                     letterSpacing: "0.05em",
                   }}
                 >
-                  {activePlan.exam_id?.toUpperCase() || "SAT"} Roadmap
+                  {dashboardExamId.toUpperCase()} Roadmap
                 </span>
                 {daysUntilExam !== null && (
                   <span

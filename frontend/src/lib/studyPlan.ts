@@ -96,7 +96,7 @@ export function normalizeActiveStudyPlan(value: unknown): ActiveStudyPlan | null
 
   return {
     id: typeof plan.id === 'string' ? plan.id : '',
-    exam_id: typeof plan.exam_id === 'string' ? plan.exam_id : 'sat',
+    exam_id: typeof plan.exam_id === 'string' ? plan.exam_id : '',
     target_date: typeof plan.target_date === 'string'
       ? plan.target_date
       : typeof plan.exam_date === 'string' ? plan.exam_date : '',

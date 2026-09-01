@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db
 from app.core.security import hash_password
 from app.models.models import User
-from app.schemas.schemas import UserProfileUpdate, UserProfileOut, PasswordChangeRequest
+from app.schemas.schemas import UserProfileUpdate, UserProfileOut, PasswordChangeRequest, UserSettingsUpdate
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/profile", tags=["profile"])
@@ -116,11 +116,7 @@ def update_preferences(
     }
 
 
-@router.get("/settings")
-def get_settings(
-    current_user: User = Depends(get_current_user),
-) -> dict:
-    """Get user settings and preferences."""
+def _settings_response(current_user: User) -> dict:
     return {
         "user_id": current_user.id,
         "email": current_user.email,
@@ -128,4 +124,36 @@ def get_settings(
         "difficulty_preference": "adaptive",
         "theme": "light",
         "language": "en",
+        "exam_date": current_user.exam_date.isoformat() if current_user.exam_date else None,
+        "target_exam": current_user.primary_exam_id,
+        "target_score": current_user.target_score,
     }
+
+
+@router.get("/settings")
+def get_settings(
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """Get persisted user settings and preferences."""
+    return _settings_response(current_user)
+
+
+@router.put("/settings")
+def update_settings(
+    payload: UserSettingsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Persist exam settings used by the dashboard and analytics pages."""
+    fields = payload.model_fields_set
+    if "exam_date" in fields:
+        current_user.exam_date = payload.exam_date
+    if "target_exam" in fields:
+        current_user.primary_exam_id = payload.target_exam.lower() if payload.target_exam else None
+    if "target_score" in fields:
+        current_user.target_score = payload.target_score
+
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    return _settings_response(current_user)
