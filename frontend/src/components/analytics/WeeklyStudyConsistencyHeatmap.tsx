@@ -59,9 +59,13 @@ export const WeeklyStudyConsistencyHeatmap: React.FC<WeeklyStudyConsistencyHeatm
     }
   };
 
-  const weeks: ConsistencyWeek[] = data?.weeks || [];
+  const weeks: ConsistencyWeek[] = Array.isArray(data?.weeks) ? data.weeks : [];
   const currentWeekDays: HeatmapDay[] =
-    data?.current_week_days || (weeks.length > 0 ? weeks[weeks.length - 1].days : []);
+    Array.isArray(data?.current_week_days)
+      ? data.current_week_days
+      : (weeks.length > 0 && Array.isArray(weeks[weeks.length - 1].days)
+        ? weeks[weeks.length - 1].days
+        : []);
 
   // Default active day inspection to today or latest day
   const inspectedDay =
@@ -420,7 +424,7 @@ export const WeeklyStudyConsistencyHeatmap: React.FC<WeeklyStudyConsistencyHeatm
                   </div>
 
                   {/* 7 Day Tiles */}
-                  {week.days.map((day) => {
+                  {(Array.isArray(week.days) ? week.days : []).map((day) => {
                     const style = getIntensityStyles(day.intensity_level, day.is_goal_met);
                     const isSelected = selectedDay?.date === day.date;
                     const isHovered = hoveredDay?.date === day.date;

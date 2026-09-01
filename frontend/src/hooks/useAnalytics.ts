@@ -228,6 +228,44 @@ export interface WeeklyConsistencyResponse {
   current_week_days: HeatmapDay[];
 }
 
+function asHeatmapDays(value: unknown): HeatmapDay[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.filter((day): day is HeatmapDay => {
+    return Boolean(day) && typeof day === 'object' && typeof (day as HeatmapDay).date === 'string';
+  }).map((day) => ({
+    ...day,
+    topics: Array.isArray(day.topics) ? day.topics : [],
+  }));
+}
+
+export function normalizeWeeklyConsistency(value: unknown): WeeklyConsistencyResponse {
+  const source = value && typeof value === 'object'
+    ? value as Partial<WeeklyConsistencyResponse>
+    : {};
+  const rawWeeks = Array.isArray(source.weeks) ? source.weeks : [];
+  const weeks = rawWeeks
+    .filter((week): week is ConsistencyWeek => Boolean(week) && typeof week === 'object')
+    .map((week) => ({
+      ...week,
+      days: asHeatmapDays(week.days),
+    }));
+  const fallbackCurrentWeek = weeks.length > 0 ? weeks[weeks.length - 1].days : [];
+
+  return {
+    current_streak: Number(source.current_streak) || 0,
+    longest_streak: Number(source.longest_streak) || 0,
+    weekly_adherence_rate: Number(source.weekly_adherence_rate) || 0,
+    total_active_days: Number(source.total_active_days) || 0,
+    total_study_hours_month: Number(source.total_study_hours_month) || 0,
+    best_day_of_week: typeof source.best_day_of_week === 'string' ? source.best_day_of_week : '',
+    weeks,
+    current_week_days: Array.isArray(source.current_week_days)
+      ? asHeatmapDays(source.current_week_days)
+      : fallbackCurrentWeek,
+  };
+}
+
 export function useWeeklyConsistency() {
   const [data, setData] = useState<WeeklyConsistencyResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -237,7 +275,7 @@ export function useWeeklyConsistency() {
     try {
       setLoading(true);
       const response = await api.get('/analytics/weekly-consistency');
-      setData(response.data);
+      setData(normalizeWeeklyConsistency(response.data));
       setError(null);
     } catch (err) {
       setError('Failed to load weekly consistency heatmap');

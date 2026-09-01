@@ -7,9 +7,9 @@ export default function HomePage() {
     { name: "SAT", color: "#4F46E5", icon: "🎓" },
     { name: "ACT", color: "#06B6D4", icon: "📖" },
     { name: "GRE", color: "#7C3AED", icon: "🧠" },
-    { name: "GMAT", color: "10B981", icon: "💼" },
-    { name: "SHSAT", color: "F97316", icon: "🏫" },
-    { name: "Regents", color: "DC2626", icon: "🎯" },
+    { name: "GMAT", color: "#10B981", icon: "💼" },
+    { name: "SHSAT", color: "#F97316", icon: "🏫" },
+    { name: "Regents", color: "#DC2626", icon: "🎯" },
   ];
 
   const faqs = [
@@ -382,17 +382,17 @@ export default function HomePage() {
             <div>
               <h4 style={{ color: "#ffffff", marginBottom: 16, fontWeight: "600" }}>Company</h4>
               <ul style={{ listStyle: "none", padding: 0, lineHeight: 1.8 }}>
-                <li><a href="#" style={{ color: "#e5e7eb", textDecoration: "none" }}>About</a></li>
-                <li><a href="#" style={{ color: "#e5e7eb", textDecoration: "none" }}>Blog</a></li>
+                <li><span style={{ color: "#9ca3af" }}>About (coming soon)</span></li>
+                <li><span style={{ color: "#9ca3af" }}>Blog (coming soon)</span></li>
                 <li><a href="mailto:contact@askesisprep.com" style={{ color: "#e5e7eb", textDecoration: "none" }}>Contact Us</a></li>
               </ul>
             </div>
             <div>
               <h4 style={{ color: "#ffffff", marginBottom: 16, fontWeight: "600" }}>Legal & Support</h4>
               <ul style={{ listStyle: "none", padding: 0, lineHeight: 1.8 }}>
-                <li><a href="#" style={{ color: "#e5e7eb", textDecoration: "none" }}>Privacy Policy</a></li>
-                <li><a href="#" style={{ color: "#e5e7eb", textDecoration: "none" }}>Terms of Service</a></li>
-                <li><a href="mailto:contact@askesisprep.com" style={{ color: "#e5e7eb", textDecoration: "none" }}>Support (contact@askesisprep.com)</a></li>
+                <li><Link href="/privacy-policy" style={{ color: "#e5e7eb", textDecoration: "none" }}>Privacy Policy</Link></li>
+                <li><Link href="/terms-of-service" style={{ color: "#e5e7eb", textDecoration: "none" }}>Terms of Service</Link></li>
+                <li><a href="mailto:contact@askesisprep.com" style={{ color: "#e5e7eb", textDecoration: "none" }}>Support</a></li>
               </ul>
             </div>
           </div>
