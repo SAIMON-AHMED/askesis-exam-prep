@@ -6,6 +6,7 @@ import { LogStudyTimeModal } from './LogStudyTimeModal';
 import { CelebrationBadges } from './CelebrationBadges';
 import { useNotification } from '@/context/NotificationContext';
 import { triggerCelebrationConfetti, triggerMiniConfetti } from '@/lib/confetti';
+import { useExam } from '@/context/ExamContext';
 
 export interface StudyLogItem {
   id: string;
@@ -32,6 +33,7 @@ export interface DailyGoalData {
 
 export const DailyStudyGoalCard: React.FC = () => {
   const { success, error: notifyError, info } = useNotification();
+  const { selectedExam } = useExam();
   const [data, setData] = useState<DailyGoalData>({
     today_study_hours: 0,
     daily_study_goal_hours: 2.0,
@@ -151,7 +153,7 @@ export const DailyStudyGoalCard: React.FC = () => {
       const response = await api.post('/study-time/log', {
         duration_minutes: minutes,
         topic: 'Quick Practice Session',
-        exam_type: 'SAT',
+        exam_type: selectedExam?.id?.toUpperCase() || 'SAT',
         activity_type: '⚡ Quick Log',
       });
       const updated = response.data;

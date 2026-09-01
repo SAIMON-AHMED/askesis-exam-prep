@@ -56,6 +56,9 @@ class User(Base):
     exam_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     target_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     weekly_study_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
+    daily_study_goal_hours: Mapped[float] = mapped_column(Float, default=2.0)
+    daily_goal_reminder_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    daily_goal_reminder_time: Mapped[str] = mapped_column(String(5), default="20:00")
     weak_topics: Mapped[list | None] = mapped_column(JSON, nullable=True)
     onboarding_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -305,6 +308,8 @@ class StudySession(Base):
     duration_seconds: Mapped[int] = mapped_column(Integer, nullable=False)
     questions_attempted: Mapped[int] = mapped_column(Integer, nullable=False)
     questions_correct: Mapped[int] = mapped_column(Integer, nullable=False)
+    activity_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )

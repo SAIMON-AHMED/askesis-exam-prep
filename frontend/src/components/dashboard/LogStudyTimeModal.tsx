@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { useNotification } from '@/context/NotificationContext';
 import { EXAMS } from '@/lib/examConstants';
 import { triggerCelebrationConfetti, triggerMiniConfetti } from '@/lib/confetti';
+import { useExam } from '@/context/ExamContext';
 
 interface LogStudyTimeModalProps {
   isOpen: boolean;
@@ -41,6 +42,7 @@ export const LogStudyTimeModal: React.FC<LogStudyTimeModalProps> = ({
   onGoalUpdated,
 }) => {
   const { success, error: notifyError } = useNotification();
+  const { selectedExam } = useExam();
 
   const [mode, setMode] = useState<'log' | 'goal'>('log');
   const [durationMinutes, setDurationMinutes] = useState<number>(30);
@@ -57,9 +59,12 @@ export const LogStudyTimeModal: React.FC<LogStudyTimeModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setTargetGoalInput(String(currentGoalHours || 2.0));
+      if (selectedExam?.id) {
+        setExamType(selectedExam.id.toUpperCase());
+      }
       setErrorMessage(null);
     }
-  }, [isOpen, currentGoalHours]);
+  }, [isOpen, currentGoalHours, selectedExam?.id]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

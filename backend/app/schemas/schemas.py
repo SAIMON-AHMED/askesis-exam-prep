@@ -390,6 +390,23 @@ class StudyTimeResponse(BaseModel):
     session_count: int
 
 
+class StudyTimeLogRequest(BaseModel):
+    duration_minutes: int = Field(ge=1, le=1440)
+    topic: str = Field(default="General Study & Practice", min_length=1, max_length=255)
+    exam_type: str = Field(default="SAT", min_length=1, max_length=50)
+    activity_type: str | None = Field(default=None, max_length=100)
+    notes: str | None = Field(default=None, max_length=2000)
+
+
+class DailyStudyGoalUpdate(BaseModel):
+    daily_study_goal_hours: float = Field(gt=0, le=24)
+
+
+class StudyReminderUpdate(BaseModel):
+    daily_goal_reminder_enabled: bool
+    daily_goal_reminder_time: str = Field(default="20:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
 class TopicPerformanceResponse(BaseModel):
     topic: str
     mastery_score: float
