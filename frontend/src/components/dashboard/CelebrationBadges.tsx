@@ -13,7 +13,7 @@ interface CelebrationBadgesProps {
 export const CelebrationBadges: React.FC<CelebrationBadgesProps> = ({
   todayHours,
   goalHours,
-  streakDays = 12,
+  streakDays = 0,
   onTriggerConfetti,
 }) => {
   const isGoalMet = todayHours >= goalHours;
@@ -39,13 +39,13 @@ export const CelebrationBadges: React.FC<CelebrationBadgesProps> = ({
     {
       id: 'streak_master',
       icon: '🔥',
-      title: `${streakDays}-Day Study Streak`,
-      subtitle: 'Daily habit consistency maintained',
-      unlocked: true,
+      title: streakDays > 0 ? `${streakDays}-Day Study Streak` : 'Daily Habit Builder',
+      subtitle: streakDays > 0 ? 'Daily habit consistency maintained' : 'Study consecutive days to build a streak',
+      unlocked: streakDays > 0,
       color: '#f59e0b',
       bgGradient: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
       borderColor: '#fde68a',
-      badgeTag: 'ACTIVE',
+      badgeTag: streakDays > 0 ? 'ACTIVE' : '0 DAYS',
     },
     {
       id: 'focus_titan',

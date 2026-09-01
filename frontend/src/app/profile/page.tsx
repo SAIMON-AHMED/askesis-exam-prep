@@ -27,6 +27,11 @@ export default function ProfilePage() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [dailyGoalReminder, setDailyGoalReminder] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [examDate, setExamDate] = useState('');
+  const [targetExam, setTargetExam] = useState('sat');
+  const [targetScore, setTargetScore] = useState<string>('1520');
+  const [settingsMessage, setSettingsMessage] = useState('');
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   React.useEffect(() => {
     if (!isLoggedIn && !profileLoading) {
@@ -47,6 +52,15 @@ export default function ProfilePage() {
       setEmailNotifications(settings.email_notifications);
       if (typeof settings.daily_goal_reminder_enabled === 'boolean') {
         setDailyGoalReminder(settings.daily_goal_reminder_enabled);
+      }
+      if (settings.exam_date) {
+        setExamDate(settings.exam_date);
+      }
+      if (settings.target_exam) {
+        setTargetExam(settings.target_exam);
+      }
+      if (settings.target_score !== undefined) {
+        setTargetScore(String(settings.target_score));
       }
     }
   }, [settings]);
@@ -129,12 +143,25 @@ export default function ProfilePage() {
   };
 
   const handleSaveSettings = async () => {
-    await updateSettings({
-      theme,
-      language,
-      email_notifications: emailNotifications,
-      daily_goal_reminder_enabled: dailyGoalReminder,
-    });
+    setIsSavingSettings(true);
+    setSettingsMessage('');
+    try {
+      await updateSettings({
+        theme,
+        language,
+        email_notifications: emailNotifications,
+        daily_goal_reminder_enabled: dailyGoalReminder,
+        exam_date: examDate || undefined,
+        target_exam: targetExam,
+        target_score: targetScore ? parseInt(targetScore, 10) : undefined,
+      });
+      setSettingsMessage('Settings saved successfully!');
+      setTimeout(() => setSettingsMessage(''), 3000);
+    } catch {
+      setSettingsMessage('Failed to save settings');
+    } finally {
+      setIsSavingSettings(false);
+    }
   };
 
   return (
@@ -250,7 +277,7 @@ export default function ProfilePage() {
                   <strong>Joined:</strong> {profile && new Date(profile.created_at).toLocaleDateString()}
                 </div>
                 <div>
-                  <strong>Total Study Hours:</strong> {profile?.total_study_hours.toFixed(1)}
+                  <strong>Total Study Hours:</strong> {(profile?.total_study_hours ?? 0).toFixed(1)}
                 </div>
               </div>
 
@@ -360,8 +387,101 @@ export default function ProfilePage() {
                 </label>
               </div>
 
-              <button className="btn-primary" style={{ width: '100%' }} onClick={handleSaveSettings}>
-                Save Settings
+              <div style={{ margin: 'var(--space-5) 0 var(--space-4)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--border-color)' }}>
+                <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: '600', color: '#0f172a' }}>
+                  🎯 Exam Target & Schedule
+                </h3>
+                <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b' }}>
+                  Your scheduled exam date powers the dynamic countdown timer and personalized roadmap pacing.
+                </p>
+
+                <div style={{ marginBottom: 'var(--space-4)' }}>
+                  <label
+                    htmlFor="target-exam"
+                    style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}
+                  >
+                    Target Exam
+                  </label>
+                  <select
+                    id="target-exam"
+                    value={targetExam}
+                    onChange={(e) => setTargetExam(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '6px',
+                    }}
+                  >
+                    <option value="sat">SAT (Digital)</option>
+                    <option value="act">ACT</option>
+                    <option value="gre">GRE General</option>
+                    <option value="gmat">GMAT Focus</option>
+                    <option value="shsat">SHSAT</option>
+                    <option value="regents">NYS Regents</option>
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: 'var(--space-4)' }}>
+                  <label
+                    htmlFor="exam-date"
+                    style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}
+                  >
+                    Scheduled Exam Date
+                  </label>
+                  <input
+                    id="exam-date"
+                    type="date"
+                    value={examDate}
+                    onChange={(e) => setExamDate(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '6px',
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: 'var(--space-4)' }}>
+                  <label
+                    htmlFor="target-score"
+                    style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}
+                  >
+                    Target Score Goal
+                  </label>
+                  <input
+                    id="target-score"
+                    type="number"
+                    value={targetScore}
+                    onChange={(e) => setTargetScore(e.target.value)}
+                    placeholder="e.g. 1520"
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '6px',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {settingsMessage && (
+                <div
+                  className={settingsMessage.includes('successfully') ? 'alert alert-success' : 'alert alert-error'}
+                  style={{ marginBottom: 'var(--space-4)' }}
+                >
+                  {settingsMessage}
+                </div>
+              )}
+
+              <button
+                className="btn-primary"
+                style={{ width: '100%' }}
+                disabled={isSavingSettings}
+                onClick={handleSaveSettings}
+              >
+                {isSavingSettings ? 'Saving...' : 'Save Settings'}
               </button>
             </>
           )}

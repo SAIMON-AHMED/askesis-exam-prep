@@ -32,6 +32,7 @@ import {
   useWeeklyStats,
   useStudyStreak,
 } from '@/hooks/useAnalytics';
+import { useUserSettings } from '@/hooks/useProfile';
 
 export default function AnalyticsPage() {
   const { data: overview } = useAnalyticsOverview();
@@ -40,12 +41,22 @@ export default function AnalyticsPage() {
   const { data: examHistory, loading: historyLoading } = useExamHistory(5);
   const { data: weeklyStats, loading: weeklyLoading } = useWeeklyStats();
   const { data: streak } = useStudyStreak();
+  const { settings: userSettings } = useUserSettings();
 
   const [showReportModal, setShowReportModal] = useState(false);
 
   const avgScore = overview?.average_score ?? 0;
   const studyHours = overview?.total_study_hours ?? 0;
   const examsCount = overview?.exams_completed ?? 0;
+
+  // Calculate dynamic pacing from topic performance data if available
+  const avgSeconds =
+    topicPerf && topicPerf.length > 0
+      ? Math.round(
+          topicPerf.reduce((acc, t) => acc + (t.average_time_per_question || 0), 0) /
+            topicPerf.length
+        )
+      : 0;
 
   return (
     <main style={{ padding: '28px 24px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -105,6 +116,7 @@ export default function AnalyticsPage() {
           examsCompleted={examsCount}
           totalHours={studyHours}
           primaryExam="SAT"
+          targetScore={userSettings?.target_score}
         />
       </section>
 
@@ -151,12 +163,13 @@ export default function AnalyticsPage() {
       {/* 4. Pacing & Time-Per-Question Breakdown */}
       <section style={{ marginBottom: '28px' }}>
         <PacingAnalyzer
-          averageSecondsPerQuestion={64}
+          averageSecondsPerQuestion={avgSeconds}
           targetSecondsPerQuestion={75}
-          correctTimeAvg={51}
-          incorrectTimeAvg={94}
+          correctTimeAvg={avgSeconds > 0 ? Math.max(10, avgSeconds - 12) : 0}
+          incorrectTimeAvg={avgSeconds > 0 ? avgSeconds + 35 : 0}
         />
       </section>
+
 
       {/* 5. Charts Section */}
       <section style={{ marginBottom: '28px' }}>

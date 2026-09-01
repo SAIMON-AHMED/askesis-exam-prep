@@ -16,10 +16,10 @@ export const DiagnosticReportModal: React.FC<DiagnosticReportProps> = ({
   isOpen,
   onClose,
   examType = 'SAT',
-  averageScore = 78,
-  totalHours = 14.5,
-  examsCompleted = 5,
-  accuracy = 81.2,
+  averageScore = 0,
+  totalHours = 0,
+  examsCompleted = 0,
+  accuracy = 0,
 }) => {
   if (!isOpen) return null;
 

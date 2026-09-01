@@ -157,6 +157,13 @@ export default function PracticePage() {
 
   useEffect(() => {
     loadQuota();
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search);
+      const topicParam = sp.get("topic");
+      const examParam = sp.get("exam");
+      if (examParam) setSelectedExamId(examParam);
+      if (topicParam) setSelectedTopicId(topicParam);
+    }
   }, []);
 
   useEffect(() => {

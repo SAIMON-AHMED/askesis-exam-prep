@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { mockBackend } from '@/lib/mockBackendStore';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -32,30 +34,44 @@ export async function POST(
     const scaledLow = 1450 + Math.floor(accuracy * 1.2);
     const scaledHigh = Math.min(1600, scaledLow + 40);
 
-    mockBackend.user.exams_completed += 1;
-    mockBackend.user.total_study_hours += 1.2;
+    const examType = session?.exam_type || 'SAT';
+    const timeTaken = session?.duration_seconds ? Math.max(10, Math.round(session.duration_seconds / 60)) : 45;
+
+    // Automatically create a study log entry for this exam
+    mockBackend.studyLogs.unshift({
+      id: `log-exam-${Date.now()}`,
+      duration_minutes: timeTaken,
+      topic: `${examType} Practice Exam`,
+      exam_type: examType,
+      activity_type: 'Practice Exam',
+      notes: `Scored ${rawScore}/${total} (${accuracy}%) on ${examType} section drill.`,
+      timestamp: new Date().toISOString(),
+    });
 
     const result = {
       id,
-      exam_type: session?.exam_type || 'SAT',
+      exam_type: examType,
       raw_score: rawScore,
       total_questions: total,
       accuracy_percentage: accuracy,
       scaled_score_low: scaledLow,
       scaled_score_high: scaledHigh,
+      time_taken_minutes: timeTaken,
       status: 'completed',
       submitted_at: new Date().toISOString(),
       topic_breakdown: {
-        'Heart of Algebra': { correct: 6, total: 7, percentage: 86 },
-        'Passport to Advanced Math': { correct: 5, total: 6, percentage: 83 },
-        'Reading Comprehension': { correct: 6, total: 7, percentage: 86 },
+        'Heart of Algebra': { correct: Math.max(1, Math.round(rawScore * 0.35)), total: Math.max(1, Math.round(total * 0.35)), percentage: accuracy },
+        'Passport to Advanced Math': { correct: Math.max(1, Math.round(rawScore * 0.3)), total: Math.max(1, Math.round(total * 0.3)), percentage: accuracy },
+        'Reading Comprehension': { correct: Math.max(1, Math.round(rawScore * 0.35)), total: Math.max(1, Math.round(total * 0.35)), percentage: accuracy },
       },
     };
 
     mockBackend.examHistory.unshift(result);
+    mockBackend.recalculateTotals();
 
     return NextResponse.json(result);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+

@@ -15,3 +15,7 @@ export async function PUT(request: Request) {
     return NextResponse.json(mockBackend.user);
   }
 }
+
+export async function PATCH(request: Request) {
+  return PUT(request);
+}

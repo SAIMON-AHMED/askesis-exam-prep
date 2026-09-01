@@ -279,7 +279,7 @@ export const DailyStudyGoalCard: React.FC = () => {
                       color: '#475569',
                     }}
                   >
-                    🔥 {data.current_streak || 12} Day Streak
+                    🔥 {data.current_streak ?? 0} Day Streak
                   </span>
                 )}
               </div>
@@ -745,7 +745,7 @@ export const DailyStudyGoalCard: React.FC = () => {
           <CelebrationBadges
             todayHours={todayHours}
             goalHours={goalHours}
-            streakDays={data.current_streak || 12}
+            streakDays={data.current_streak ?? 0}
             onTriggerConfetti={triggerCelebrationConfetti}
           />
         )}

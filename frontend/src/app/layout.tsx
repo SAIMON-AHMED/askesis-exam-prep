@@ -1,6 +1,6 @@
 import "./globals.css";
 import type { ReactNode } from "react";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
 import AppFrame from "@/components/AppFrame";
@@ -11,27 +11,18 @@ import { NotificationProvider } from "@/context/NotificationContext";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
   title: "Askesis - Adaptive Exam Prep for SAT, ACT, GRE, GMAT & More",
   description: "Master standardized exams with AI-adaptive learning, full-length simulations, and personalized study plans for SAT, ACT, GRE, GMAT, SHSAT, and Regents.",
-  keywords: ["SAT prep", "ACT prep", "GRE prep", "GMAT prep", "exam preparation", "adaptive learning", "study plan", "practice tests"],
-  authors: [{ name: "Askesis" }],
-  creator: "Askesis",
-  publisher: "Askesis",
+  keywords: "SAT prep, ACT prep, GRE prep, GMAT prep, exam preparation, adaptive learning, study plan, practice tests",
   icons: {
     icon: "/favicon.svg",
     apple: "/favicon.svg",
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-snippet": -1,
-      "max-image-preview": "large",
-      "max-video-preview": -1,
-    },
   },
   openGraph: {
     type: "website",
@@ -40,21 +31,13 @@ export const metadata: Metadata = {
     siteName: "Askesis",
     title: "Askesis - Adaptive Exam Prep",
     description: "Master SAT, ACT, GRE, GMAT with AI-adaptive learning and personalized study plans.",
-    images: [
-      {
-        url: "https://askesisprep.com/og-image.jpg",
-        width: 1200,
-        height: 630,
-        alt: "Askesis - Adaptive Exam Prep Platform",
-        type: "image/jpeg",
-      },
-    ],
+    images: "https://askesisprep.com/og-image.jpg",
   },
   twitter: {
     card: "summary_large_image",
     title: "Askesis - Adaptive Exam Prep",
     description: "Master standardized exams with AI-adaptive learning.",
-    images: ["https://askesisprep.com/og-image.jpg"],
+    images: "https://askesisprep.com/og-image.jpg",
   },
   alternates: {
     canonical: "https://askesisprep.com",
@@ -85,12 +68,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" className={inter.variable}>
       <body>
         <Script
+          key="schema-ld-json"
           id="structured-data"
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
           strategy="afterInteractive"
         />
         <Script
+          key="google-gsi"
           src="https://accounts.google.com/gsi/client"
           strategy="lazyOnload"
         />

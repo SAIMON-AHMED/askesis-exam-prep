@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { mockBackend, MockStudyLog } from '@/lib/mockBackendStore';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -13,10 +15,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const durationHours = durationMinutes / 60;
-    mockBackend.today_study_hours = Number((mockBackend.today_study_hours + durationHours).toFixed(2));
-    mockBackend.user.total_study_hours = Number((mockBackend.user.total_study_hours + durationHours).toFixed(2));
-
     const newLog: MockStudyLog = {
       id: `log-${Date.now()}`,
       duration_minutes: durationMinutes,
@@ -28,10 +26,12 @@ export async function POST(request: Request) {
     };
 
     mockBackend.studyLogs.unshift(newLog);
+    mockBackend.recalculateTotals();
 
     const goalHours = mockBackend.daily_study_goal_hours;
     const todayHours = mockBackend.today_study_hours;
     const percentage = goalHours > 0 ? Math.min(100, Math.round((todayHours / goalHours) * 100)) : 0;
+    const streak = mockBackend.getStudyStreak();
 
     return NextResponse.json({
       success: true,
@@ -43,6 +43,7 @@ export async function POST(request: Request) {
       is_goal_reached: todayHours >= goalHours,
       remaining_hours: Number(Math.max(0, goalHours - todayHours).toFixed(2)),
       logs: mockBackend.studyLogs,
+      current_streak: streak.current_streak,
     });
   } catch {
     return NextResponse.json(
@@ -51,3 +52,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

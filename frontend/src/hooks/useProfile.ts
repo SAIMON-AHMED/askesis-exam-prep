@@ -20,6 +20,9 @@ export interface UserSettings {
   difficulty_preference: string;
   theme: string;
   language: string;
+  exam_date?: string;
+  target_exam?: string;
+  target_score?: number;
 }
 
 export function useUserProfile() {
@@ -116,8 +119,9 @@ export async function changePassword(
   return response.data;
 }
 
-export async function updateSettings(preferences: Record<string, any>): Promise<void> {
-  await api.post('/profile/preferences', preferences);
+export async function updateSettings(preferences: Record<string, any>): Promise<any> {
+  const response = await api.put('/profile/settings', preferences);
+  return response.data;
 }
 
 export async function logout(): Promise<void> {
