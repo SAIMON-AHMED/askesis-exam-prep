@@ -11,6 +11,7 @@ import {
   StudyPlanTask,
   normalizeActiveStudyPlan,
 } from "@/lib/studyPlan";
+import { useExam } from "@/context/ExamContext";
 
 interface Recommendation {
   exam_type: string;
@@ -104,6 +105,7 @@ function getTaskGuidance(task: StudyPlanTask): string {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { selectedExam, setSelectedExam } = useExam();
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [subscription, setSubscription] = useState<{ status?: string; plan_name?: string; trial_ends_at?: string | null } | null>(null);
   const [onboarding, setOnboarding] = useState<{ completed?: boolean; primary_exam_id?: string; exam_date?: string; target_score?: number } | null>(null);
@@ -285,7 +287,7 @@ export default function DashboardPage() {
   });
 
   const nextStudyLink = nextScheduledTask ? getStudyMaterialLink(nextScheduledTask, activePlan?.exam_id || "sat") : "/practice";
-  const dashboardExamId = activePlan?.exam_id || onboarding?.primary_exam_id || "sat";
+  const dashboardExamId = selectedExam?.id || onboarding?.primary_exam_id || activePlan?.exam_id || "";
 
   return (
     <div style={{ maxWidth: "1200px", margin: "0 auto", paddingBottom: "48px" }}>
@@ -435,6 +437,14 @@ export default function DashboardPage() {
           initialExamDate={onboarding?.exam_date}
           initialTargetExam={dashboardExamId}
           initialTargetScore={activePlan?.target_score || onboarding?.target_score}
+          onExamDateUpdated={(newDate, examId) => {
+            setSelectedExam(examId);
+            setOnboarding((current) => ({
+              ...current,
+              exam_date: newDate,
+              primary_exam_id: examId,
+            }));
+          }}
         />
       </div>
 
@@ -471,7 +481,7 @@ export default function DashboardPage() {
                     letterSpacing: "0.05em",
                   }}
                 >
-                  {dashboardExamId.toUpperCase()} Roadmap
+                  {dashboardExamId ? `${dashboardExamId.toUpperCase()} Roadmap` : "Study Roadmap"}
                 </span>
                 {daysUntilExam !== null && (
                   <span

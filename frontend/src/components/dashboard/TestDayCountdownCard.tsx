@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { api } from '@/lib/api';
 import { useUserSettings } from '@/hooks/useProfile';
 import { useNotification } from '@/context/NotificationContext';
@@ -9,8 +9,10 @@ interface TestDayCountdownCardProps {
   initialExamDate?: string;
   initialTargetExam?: string;
   initialTargetScore?: number;
-  onExamDateUpdated?: (newDate: string) => void;
+  onExamDateUpdated?: (newDate: string, examId: string) => void;
 }
+
+const normalizeDateInput = (value?: string) => value ? value.slice(0, 10) : '';
 
 export const TestDayCountdownCard: React.FC<TestDayCountdownCardProps> = ({
   initialExamDate,
@@ -18,32 +20,19 @@ export const TestDayCountdownCard: React.FC<TestDayCountdownCardProps> = ({
   initialTargetScore,
   onExamDateUpdated,
 }) => {
-  const { settings, loading: settingsLoading } = useUserSettings();
+  const { settings } = useUserSettings();
   const { success, error: notifyError } = useNotification();
 
-  const [examDate, setExamDate] = useState<string>(initialExamDate || '');
-  const [targetExam, setTargetExam] = useState<string>(initialTargetExam || 'SAT');
-  const [targetScore, setTargetScore] = useState<number | undefined>(initialTargetScore);
+  const [savedExamDate, setSavedExamDate] = useState<string>();
+  const [savedTargetExam, setSavedTargetExam] = useState<string>();
+  const examDate = savedExamDate ?? normalizeDateInput(initialExamDate || settings?.exam_date);
+  const targetExam = savedTargetExam ?? (initialTargetExam || settings?.target_exam || '').toUpperCase();
+  const targetScore = initialTargetScore ?? settings?.target_score;
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editDateInput, setEditDateInput] = useState<string>('');
-  const [editExamInput, setEditExamInput] = useState<string>('SAT');
+  const [editExamInput, setEditExamInput] = useState<string>(initialTargetExam?.toUpperCase() || '');
   const [isSaving, setIsSaving] = useState<boolean>(false);
-
-  // Sync with user settings
-  useEffect(() => {
-    if (settings) {
-      if (settings.exam_date) {
-        setExamDate(settings.exam_date);
-      }
-      if (settings.target_exam) {
-        setTargetExam(settings.target_exam.toUpperCase());
-      }
-      if (settings.target_score) {
-        setTargetScore(settings.target_score);
-      }
-    }
-  }, [settings]);
 
   // Compute countdown calculations
   const countdown = useMemo(() => {
@@ -144,7 +133,7 @@ export const TestDayCountdownCard: React.FC<TestDayCountdownCardProps> = ({
 
   const handleOpenEditModal = () => {
     setEditDateInput(examDate || new Date(Date.now() + 45 * 86400000).toISOString().split('T')[0]);
-    setEditExamInput(targetExam || 'SAT');
+    setEditExamInput(targetExam);
     setIsEditing(true);
   };
 
@@ -153,20 +142,29 @@ export const TestDayCountdownCard: React.FC<TestDayCountdownCardProps> = ({
       notifyError('Please pick a target exam date.');
       return;
     }
+    if (!editExamInput) {
+      notifyError('Please select the exam you are studying for.');
+      return;
+    }
 
     setIsSaving(true);
     try {
-      await api.put('/profile/settings', {
-        exam_date: editDateInput,
-        target_exam: editExamInput.toLowerCase(),
+      const currentOnboarding = await api.get('/onboarding').then((response) => response.data);
+      const saved = await api.put('/onboarding', {
+        primary_exam_id: editExamInput.toLowerCase(),
+        exam_date: new Date(`${editDateInput}T00:00:00`).toISOString(),
+        target_score: targetScore ?? currentOnboarding?.target_score ?? null,
+        weekly_study_hours: currentOnboarding?.weekly_study_hours ?? null,
+        weak_topics: Array.isArray(currentOnboarding?.weak_topics) ? currentOnboarding.weak_topics : [],
       });
 
-      setExamDate(editDateInput);
-      setTargetExam(editExamInput.toUpperCase());
+      const savedDate = saved.data?.exam_date || editDateInput;
+      setSavedExamDate(savedDate.slice(0, 10));
+      setSavedTargetExam((saved.data?.primary_exam_id || editExamInput).toUpperCase());
       setIsEditing(false);
 
       if (onExamDateUpdated) {
-        onExamDateUpdated(editDateInput);
+        onExamDateUpdated(savedDate, (saved.data?.primary_exam_id || editExamInput).toLowerCase());
       }
 
       success(`✓ Test Day countdown updated to ${new Date(`${editDateInput}T00:00:00`).toLocaleDateString()}!`);
@@ -203,18 +201,20 @@ export const TestDayCountdownCard: React.FC<TestDayCountdownCardProps> = ({
               <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Test Day Countdown
               </span>
-              <span
-                style={{
-                  padding: '2px 8px',
-                  borderRadius: '6px',
-                  backgroundColor: '#e0e7ff',
-                  color: '#4338ca',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                }}
-              >
-                {targetExam}
-              </span>
+              {targetExam && (
+                <span
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    backgroundColor: '#e0e7ff',
+                    color: '#4338ca',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                  }}
+                >
+                  {targetExam}
+                </span>
+              )}
             </div>
             <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
               {countdown.hasDate ? (
@@ -267,7 +267,7 @@ export const TestDayCountdownCard: React.FC<TestDayCountdownCardProps> = ({
               title="Change exam date or exam format"
             >
               <span>📅</span>
-              <span>{countdown.hasDate ? 'Change Date' : 'Set Date'}</span>
+              <span>{countdown.hasDate ? 'Change Test Day' : 'Set Test Day'}</span>
             </button>
           </div>
         </div>
@@ -414,14 +414,6 @@ export const TestDayCountdownCard: React.FC<TestDayCountdownCardProps> = ({
                 Set your exam date in user settings to unlock personalized daily study pacing and test countdown milestones.
               </div>
             </div>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={handleOpenEditModal}
-              style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '8px' }}
-            >
-              Configure Test Date
-            </button>
           </div>
         )}
       </div>
