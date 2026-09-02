@@ -201,6 +201,36 @@ class UserProgress(Base):
     user: Mapped["User"] = relationship(back_populates="progress")
 
 
+class LessonStatus(str, enum.Enum):
+    not_started = "not_started"
+    in_progress = "in_progress"
+    completed = "completed"
+    tested_out = "tested_out"
+
+
+class LessonProgress(Base):
+    """Learn 2.0: per-user progress through a hand-authored TopicLesson (frontend lessonsData.ts)."""
+
+    __tablename__ = "lesson_progress"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    lesson_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    topic: Mapped[str] = mapped_column(String(255), nullable=False)
+    exam_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    status: Mapped[LessonStatus] = mapped_column(Enum(LessonStatus), default=LessonStatus.not_started)
+    current_step: Mapped[int] = mapped_column(Integer, default=0)
+    micro_quiz_results: Mapped[list] = mapped_column(JSON, default=list)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    mastery_evidence_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    user: Mapped["User"] = relationship()
+
+
 class StudyPlan(Base):
     __tablename__ = "study_plans"
 

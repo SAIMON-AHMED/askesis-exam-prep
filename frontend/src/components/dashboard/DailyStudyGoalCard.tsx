@@ -579,26 +579,28 @@ export const DailyStudyGoalCard: React.FC = () => {
               style={{
                 position: 'relative',
                 display: 'inline-flex',
-                width: '46px',
-                height: '26px',
+                flexShrink: 0,
+                width: '51px',
+                height: '31px',
                 borderRadius: '9999px',
                 backgroundColor: reminderEnabled ? '#2563eb' : '#cbd5e1',
                 border: 'none',
                 cursor: isUpdatingReminder ? 'not-allowed' : 'pointer',
                 transition: 'background-color 0.2s ease',
-                padding: '3px',
+                padding: '2px',
                 alignItems: 'center',
+                boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.15)',
                 opacity: isUpdatingReminder ? 0.7 : 1,
               }}
             >
               <span
                 style={{
                   display: 'inline-block',
-                  width: '20px',
-                  height: '20px',
+                  width: '27px',
+                  height: '27px',
                   borderRadius: '50%',
                   backgroundColor: '#ffffff',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
                   transform: reminderEnabled ? 'translateX(20px)' : 'translateX(0px)',
                   transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}

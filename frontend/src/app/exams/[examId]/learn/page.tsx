@@ -235,9 +235,26 @@ export default function LearnPage() {
           <h2 style={{ fontSize: '18px', fontWeight: '700', marginTop: '12px', marginBottom: '4px' }}>
             {exam.displayName} Practice
           </h2>
-          <p style={{ fontSize: '12px', color: '#6b7280', margin: '0' }}>
+          <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 12px 0' }}>
             Master each topic
           </p>
+          <Link
+            href={`/exams/${examId}/tutor`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              borderRadius: '8px',
+              backgroundColor: exam.lightColor,
+              color: exam.primaryColor,
+              fontSize: '13px',
+              fontWeight: 600,
+              textDecoration: 'none',
+            }}
+          >
+            🧑‍🏫 Ask the AI Tutor →
+          </Link>
         </div>
 
         {/* Modules/Sections */}
@@ -355,7 +372,7 @@ export default function LearnPage() {
                     transition: 'all 200ms ease',
                   }}
                 >
-                  {mode === 'reading' && '📖 Reading Materials'}
+                  {mode === 'reading' && '📖 Cheatsheet'}
                   {mode === 'practice' && '✏️ Practice Questions'}
                 </button>
               ))}

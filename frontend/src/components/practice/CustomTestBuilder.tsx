@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { EXAMS, ExamDefinition } from '@/lib/examConstants';
 import { getCurriculumByExamId } from '@/lib/curriculumData';
 
@@ -23,7 +23,8 @@ export const CustomTestBuilder: React.FC<CustomTestBuilderProps> = ({
   initialExamId = 'sat',
   onStartTest,
 }) => {
-  const [selectedExamId, setSelectedExamId] = useState<string>(initialExamId);
+  // Exam is driven by the navbar selection; no in-page exam switcher.
+  const selectedExamId = initialExamId;
   const currentExam: ExamDefinition = EXAMS[selectedExamId] || EXAMS.sat;
   const curriculum = getCurriculumByExamId(selectedExamId);
 
@@ -38,12 +39,13 @@ export const CustomTestBuilder: React.FC<CustomTestBuilderProps> = ({
   const [mode, setMode] = useState<'tutor' | 'timed'>('timed');
   const [timeLimitMinutes, setTimeLimitMinutes] = useState<number>(15);
 
-  const handleExamChange = (newExamId: string) => {
-    setSelectedExamId(newExamId);
-    const newCurriculum = getCurriculumByExamId(newExamId);
+  // Reset topic selection whenever the navbar's exam changes
+  useEffect(() => {
+    const newCurriculum = getCurriculumByExamId(selectedExamId);
     const newAllTopics = newCurriculum.sections.flatMap((s) => s.topics);
     setSelectedTopicIds(newAllTopics.slice(0, 3).map((t) => t.id));
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedExamId]);
 
   const toggleTopic = (topicId: string) => {
     setSelectedTopicIds((prev) =>
@@ -88,47 +90,35 @@ export const CustomTestBuilder: React.FC<CustomTestBuilderProps> = ({
         </p>
       </div>
 
-      {/* 1. Select Target Exam */}
+      {/* Target Exam (fixed to navbar selection) */}
       <div style={{ marginBottom: '24px' }}>
         <label style={{ display: 'block', fontWeight: 600, fontSize: '14px', marginBottom: '10px', color: '#374151' }}>
-          1. Select Target Exam
+          Target Exam
         </label>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px' }}>
-          {Object.values(EXAMS).map((ex) => {
-            const isSelected = ex.id === selectedExamId;
-            return (
-              <button
-                key={ex.id}
-                type="button"
-                onClick={() => handleExamChange(ex.id)}
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  border: `2px solid ${isSelected ? ex.primaryColor : '#e5e7eb'}`,
-                  backgroundColor: isSelected ? ex.lightColor : '#ffffff',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'all 0.15s ease',
-                  textAlign: 'left',
-                }}
-              >
-                <span style={{ fontSize: '18px' }}>{ex.icon}</span>
-                <span style={{ fontWeight: 600, fontSize: '14px', color: isSelected ? ex.primaryColor : '#374151' }}>
-                  {ex.displayName}
-                </span>
-              </button>
-            );
-          })}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 14px',
+            borderRadius: '10px',
+            border: `2px solid ${currentExam.primaryColor}`,
+            backgroundColor: currentExam.lightColor,
+            width: 'fit-content',
+          }}
+        >
+          <span style={{ fontSize: '18px' }}>{currentExam.icon}</span>
+          <span style={{ fontWeight: 600, fontSize: '14px', color: currentExam.primaryColor }}>
+            {currentExam.displayName}
+          </span>
         </div>
       </div>
 
-      {/* 2. Choose Topics */}
+      {/* 1. Choose Topics */}
       <div style={{ marginBottom: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <label style={{ fontWeight: 600, fontSize: '14px', color: '#374151' }}>
-            2. Select Topics ({selectedTopicIds.length}/{allTopics.length} selected)
+            1. Select Topics ({selectedTopicIds.length}/{allTopics.length} selected)
           </label>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -203,7 +193,7 @@ export const CustomTestBuilder: React.FC<CustomTestBuilderProps> = ({
         {/* Difficulty */}
         <div>
           <label style={{ display: 'block', fontWeight: 600, fontSize: '14px', marginBottom: '8px', color: '#374151' }}>
-            3. Difficulty Level
+            2. Difficulty Level
           </label>
           <select
             value={difficulty}
@@ -220,7 +210,7 @@ export const CustomTestBuilder: React.FC<CustomTestBuilderProps> = ({
         {/* Question Count */}
         <div>
           <label style={{ display: 'block', fontWeight: 600, fontSize: '14px', marginBottom: '8px', color: '#374151' }}>
-            4. Question Count
+            3. Question Count
           </label>
           <div style={{ display: 'flex', gap: '6px' }}>
             {[5, 10, 15, 20, 30].map((count) => (
@@ -252,7 +242,7 @@ export const CustomTestBuilder: React.FC<CustomTestBuilderProps> = ({
         {/* Test Mode */}
         <div>
           <label style={{ display: 'block', fontWeight: 600, fontSize: '14px', marginBottom: '8px', color: '#374151' }}>
-            5. Session Format
+            4. Session Format
           </label>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button

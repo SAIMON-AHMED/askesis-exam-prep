@@ -12,6 +12,8 @@ export interface Topic {
   questionCount: number;
   estimatedHours: number;
   progressPercent: number;
+  /** Ids into lessonsData.ts, when a Tutor Mode lesson exists for this topic (Learn 2.0 pilot). */
+  lessonIds?: string[];
 }
 
 export interface Section {
@@ -103,6 +105,7 @@ export const SAT_CURRICULUM: CurriculumData = {
           questionCount: 80,
           estimatedHours: 6,
           progressPercent: 12,
+          lessonIds: ['lesson-linear-equations', 'lesson-quadratic-functions', 'lesson-exponents'],
         },
         {
           id: 'geometry',

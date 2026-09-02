@@ -103,8 +103,8 @@ export default function PracticePage() {
   const examIdFromUrl = params.examId as string | undefined;
 
   const [activeTab, setActiveTab] = useState<"quick" | "builder">("quick");
-  const [selectedExamId, setSelectedExamId] = useState<string>("");
-  const currentExamId = selectedExamId || examIdFromUrl || selectedExam?.id || "sat";
+  // Exam is driven by the navbar selection; no in-page exam switcher.
+  const currentExamId = examIdFromUrl || selectedExam?.id || "sat";
   const currentExam = getExam(currentExamId) || EXAMS.sat;
   const curriculum = getCurriculumByExamId(currentExamId);
 
@@ -135,6 +135,7 @@ export default function PracticePage() {
   const refillingRef = useRef(false);
   const prefetchCursorRef = useRef(0);
   const [exhausted, setExhausted] = useState(false);
+  const prevExamIdRef = useRef(currentExamId);
 
   const syncBuffer = () => setBufferCount(queueRef.current.length);
 
@@ -160,11 +161,17 @@ export default function PracticePage() {
     if (typeof window !== "undefined") {
       const sp = new URLSearchParams(window.location.search);
       const topicParam = sp.get("topic");
-      const examParam = sp.get("exam");
-      if (examParam) setSelectedExamId(examParam);
       if (topicParam) setSelectedTopicId(topicParam);
     }
   }, []);
+
+  // Reset topic selection whenever the navbar's exam actually changes (not on initial mount)
+  useEffect(() => {
+    if (prevExamIdRef.current !== currentExamId) {
+      prevExamIdRef.current = currentExamId;
+      setSelectedTopicId("");
+    }
+  }, [currentExamId]);
 
   useEffect(() => {
     if (!sessionActive) return;
@@ -204,7 +211,6 @@ export default function PracticePage() {
   };
 
   const handleStartCustomTest = async (config: CustomTestConfig) => {
-    setSelectedExamId(config.examId);
     const newSession: PracticeSession = {
       examId: config.examId,
       topics: config.topicNames,
@@ -509,80 +515,81 @@ export default function PracticePage() {
           <div className="card" style={{ padding: "28px", borderRadius: "16px", border: "1px solid #e5e7eb" }}>
             <h2 style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 16px 0" }}>Quick Practice Setup</h2>
 
-            <label htmlFor="practice-exam" style={{ marginBottom: "8px", display: "block", fontWeight: "600", fontSize: "14px" }}>
-              Select Exam
+            <label style={{ marginBottom: "8px", display: "block", fontWeight: "600", fontSize: "14px" }}>
+              Exam
+            </label>
+            <div
+              style={{
+                marginBottom: "20px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "10px 14px",
+                borderRadius: "8px",
+                border: `2px solid ${currentExam.primaryColor}`,
+                backgroundColor: currentExam.lightColor,
+                width: "fit-content",
+              }}
+            >
+              <span style={{ fontSize: "18px" }}>{currentExam.icon}</span>
+              <span style={{ fontWeight: 600, fontSize: "14px", color: currentExam.primaryColor }}>
+                {currentExam.displayName}
+              </span>
+              {!accessLoading && !hasAccess(currentExamId) && (
+                <span style={{ fontSize: "12px", color: "#6b7280" }}> — 5 free questions/day</span>
+              )}
+            </div>
+
+            <label htmlFor="practice-topic" style={{ marginBottom: "8px", display: "block", fontWeight: "600", fontSize: "14px" }}>
+              Select Topic
             </label>
             <select
-              id="practice-exam"
-              value={selectedExamId}
-              onChange={(e) => {
-                setSelectedExamId(e.target.value);
-                setSelectedTopicId("");
-              }}
+              id="practice-topic"
+              value={selectedTopicId}
+              onChange={(e) => setSelectedTopicId(e.target.value)}
               style={{ marginBottom: "20px", padding: "10px 12px", borderRadius: "8px" }}
             >
-              <option value="">Choose an exam...</option>
-              {Object.values(EXAMS).map((exam) => (
-                <option key={exam.id} value={exam.id}>
-                  {exam.displayName} {!accessLoading && !hasAccess(exam.id) ? " — 5 free questions/day" : ""}
-                </option>
+              <option value="">All topics ({curriculum.totalTopics})</option>
+              {curriculum.sections.map((section) => (
+                <optgroup key={section.id} label={section.name}>
+                  {section.topics.map((topic) => (
+                    <option key={topic.id} value={topic.id}>
+                      {topic.name}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
 
-            {selectedExamId && (
-              <>
-                <label htmlFor="practice-topic" style={{ marginBottom: "8px", display: "block", fontWeight: "600", fontSize: "14px" }}>
-                  Select Topic
-                </label>
-                <select
-                  id="practice-topic"
-                  value={selectedTopicId}
-                  onChange={(e) => setSelectedTopicId(e.target.value)}
-                  style={{ marginBottom: "20px", padding: "10px 12px", borderRadius: "8px" }}
-                >
-                  <option value="">All topics ({curriculum.totalTopics})</option>
-                  {curriculum.sections.map((section) => (
-                    <optgroup key={section.id} label={section.name}>
-                      {section.topics.map((topic) => (
-                        <option key={topic.id} value={topic.id}>
-                          {topic.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
+            <label htmlFor="practice-difficulty" style={{ marginBottom: "8px", display: "block", fontWeight: "600", fontSize: "14px" }}>
+              Difficulty Level
+            </label>
+            <select
+              id="practice-difficulty"
+              value={difficulty}
+              onChange={(e) => setDifficulty(Number(e.target.value))}
+              style={{ marginBottom: "24px", padding: "10px 12px", borderRadius: "8px" }}
+            >
+              <option value={1}>Level 1 - Foundational</option>
+              <option value={2}>Level 2 - Standard Test Day</option>
+              <option value={3}>Level 3 - Advanced & Traps</option>
+            </select>
 
-                <label htmlFor="practice-difficulty" style={{ marginBottom: "8px", display: "block", fontWeight: "600", fontSize: "14px" }}>
-                  Difficulty Level
-                </label>
-                <select
-                  id="practice-difficulty"
-                  value={difficulty}
-                  onChange={(e) => setDifficulty(Number(e.target.value))}
-                  style={{ marginBottom: "24px", padding: "10px 12px", borderRadius: "8px" }}
-                >
-                  <option value={1}>Level 1 - Foundational</option>
-                  <option value={2}>Level 2 - Standard Test Day</option>
-                  <option value={3}>Level 3 - Advanced & Traps</option>
-                </select>
+            <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px" }}>
+              {selectedTopicId ? (
+                <>You will practice questions specifically for <strong>{selectedTopicName}</strong>.</>
+              ) : (
+                <>You will practice across all {curriculum.totalTopics} curriculum topics.</>
+              )}
+            </p>
 
-                <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px" }}>
-                  {selectedTopicId ? (
-                    <>You will practice questions specifically for <strong>{selectedTopicName}</strong>.</>
-                  ) : (
-                    <>You will practice across all {curriculum.totalTopics} curriculum topics.</>
-                  )}
-                </p>
-
-                <button
-                  className="btn-primary"
-                  onClick={startPracticeSession}
-                  style={{ padding: "12px 24px", width: "100%", fontWeight: 600, fontSize: "15px", borderRadius: "8px" }}
-                >
-                  🚀 Start Practice Session
-                </button>
-              </>
-            )}
+            <button
+              className="btn-primary"
+              onClick={startPracticeSession}
+              style={{ padding: "12px 24px", width: "100%", fontWeight: 600, fontSize: "15px", borderRadius: "8px" }}
+            >
+              🚀 Start Practice Session
+            </button>
           </div>
         )}
       </div>

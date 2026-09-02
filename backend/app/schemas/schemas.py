@@ -138,6 +138,38 @@ class ReviewAnswerRequest(BaseModel):
     rating: str = Field(pattern="^(again|hard|good|easy)$")
 
 
+# ---------- Learn 2.0: Lessons ----------
+class MicroQuizResultIn(BaseModel):
+    step_number: int
+    correct: bool
+    attempts: int = Field(default=1, ge=1)
+    hints_used: int = Field(default=0, ge=0)
+
+
+class LessonProgressUpdate(BaseModel):
+    topic: str
+    exam_type: str
+    status: str = Field(pattern="^(not_started|in_progress|completed|tested_out)$")
+    current_step: int = Field(default=0, ge=0)
+    micro_quiz_result: MicroQuizResultIn | None = None
+    mastery_evidence_score: float | None = Field(default=None, ge=0, le=100)
+
+
+class LessonProgressOut(BaseModel):
+    lesson_id: str
+    topic: str
+    exam_type: str
+    status: str
+    current_step: int
+    micro_quiz_results: list[dict] = []
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    mastery_evidence_score: float | None = None
+
+    class Config:
+        from_attributes = True
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
