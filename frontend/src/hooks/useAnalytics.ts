@@ -45,7 +45,7 @@ export interface Streak {
   streak_unit: string;
 }
 
-export function useAnalyticsOverview() {
+export function useAnalyticsOverview(examType?: string) {
   const [data, setData] = useState<AnalyticsOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +53,8 @@ export function useAnalyticsOverview() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await api.get('/analytics/overview');
+        const query = examType ? `?exam_type=${encodeURIComponent(examType)}` : '';
+        const response = await api.get(`/analytics/overview${query}`);
         setData(response.data);
         setError(null);
       } catch (err) {
@@ -65,7 +66,7 @@ export function useAnalyticsOverview() {
     };
 
     fetchData();
-  }, []);
+  }, [examType]);
 
   return { data, loading, error };
 }
@@ -95,7 +96,7 @@ export function useStudyTimeBreakdown() {
   return { data, loading, error };
 }
 
-export function useTopicPerformance() {
+export function useTopicPerformance(examType?: string) {
   const [data, setData] = useState<TopicPerformance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -103,7 +104,8 @@ export function useTopicPerformance() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await api.get('/analytics/topic-performance');
+        const query = examType ? `?exam_type=${encodeURIComponent(examType)}` : '';
+        const response = await api.get(`/analytics/topic-performance${query}`);
         setData(response.data);
         setError(null);
       } catch (err) {
@@ -115,12 +117,12 @@ export function useTopicPerformance() {
     };
 
     fetchData();
-  }, []);
+  }, [examType]);
 
   return { data, loading, error };
 }
 
-export function useExamHistory(limit: number = 10) {
+export function useExamHistory(limit: number = 10, examType?: string) {
   const [data, setData] = useState<ExamHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -128,7 +130,10 @@ export function useExamHistory(limit: number = 10) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await api.get(`/analytics/exam-history?limit=${limit}`);
+        const params = new URLSearchParams();
+        params.append('limit', limit.toString());
+        if (examType) params.append('exam_type', examType);
+        const response = await api.get(`/analytics/exam-history?${params.toString()}`);
         setData(response.data);
         setError(null);
       } catch (err) {
@@ -140,12 +145,12 @@ export function useExamHistory(limit: number = 10) {
     };
 
     fetchData();
-  }, [limit]);
+  }, [limit, examType]);
 
   return { data, loading, error };
 }
 
-export function useWeeklyStats() {
+export function useWeeklyStats(examType?: string) {
   const [data, setData] = useState<WeeklyStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -153,8 +158,13 @@ export function useWeeklyStats() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await api.get('/analytics/weekly-stats');
-        setData(response.data);
+        const query = examType ? `?exam_type=${encodeURIComponent(examType)}` : '';
+        const response = await api.get(`/analytics/weekly-stats${query}`);
+        // Backend returns {global_daily, exam_daily} structure when exam_type is provided
+        // Extract the appropriate data based on whether we're filtering by exam
+        const responseData = response.data;
+        const weeklData = examType && responseData.exam_daily ? responseData.exam_daily : responseData.global_daily || responseData;
+        setData(weeklData);
         setError(null);
       } catch (err) {
         setError('Failed to load weekly stats');
@@ -165,7 +175,7 @@ export function useWeeklyStats() {
     };
 
     fetchData();
-  }, []);
+  }, [examType]);
 
   return { data, loading, error };
 }

@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
+from app.core.exam_config import normalize_exam_id
 from app.models.models import StudySession, User
 from app.schemas.schemas import DailyStudyGoalUpdate, StudyReminderUpdate, StudyTimeLogRequest
 
@@ -81,7 +82,7 @@ def log_study_time(
     session = StudySession(
         user_id=current_user.id,
         topic=payload.topic.strip(),
-        exam_type=payload.exam_type.upper(),
+        exam_type=normalize_exam_id(payload.exam_type) or payload.exam_type.lower().strip(),
         duration_seconds=payload.duration_minutes * 60,
         questions_attempted=0,
         questions_correct=0,

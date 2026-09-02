@@ -583,6 +583,186 @@ class Store {
       },
       completed_tasks: [],
     },
+    {
+      id: 'plan-2',
+      user_id: 'user-demo-1',
+      exam_id: 'gre',
+      target_date: new Date(Date.now() + 45 * 86400000).toISOString().split('T')[0],
+      target_score: 325,
+      weekly_hours: 10,
+      is_active: false,
+      plan_json: {
+        title: 'GRE General Test 6-Week Roadmap',
+        description: 'Comprehensive preparation for Verbal & Quantitative reasoning',
+        weeks: [
+          {
+            week_number: 1,
+            theme: 'Quantitative Foundations & Vocabulary Building',
+            days: [
+              { day: 'Mon', task_key: 'w1-d1', task_title: 'Arithmetic & Basic Algebra Review', topic: 'Quantitative Reasoning', duration_minutes: 50, completed: false },
+              { day: 'Wed', task_key: 'w1-d3', task_title: 'Essential GRE Vocabulary (300 words)', topic: 'Verbal Reasoning', duration_minutes: 45, completed: false },
+              { day: 'Fri', task_key: 'w1-d5', task_title: 'Text Completion Practice Drills', topic: 'Verbal Reasoning', duration_minutes: 40, completed: false },
+              { day: 'Sat', task_key: 'w1-d6', task_title: 'Diagnostic Mini-Test (Verbal & Quant)', topic: 'Full Review', duration_minutes: 90, completed: false },
+            ],
+          },
+          {
+            week_number: 2,
+            theme: 'Advanced Algebra & Reading Comprehension',
+            days: [
+              { day: 'Mon', task_key: 'w2-d1', task_title: 'Quadratic Equations & Functions', topic: 'Quantitative Reasoning', duration_minutes: 50, completed: false },
+              { day: 'Wed', task_key: 'w2-d3', task_title: 'Reading Comprehension Strategies', topic: 'Verbal Reasoning', duration_minutes: 45, completed: false },
+              { day: 'Fri', task_key: 'w2-d5', task_title: 'Sentence Equivalence Drills', topic: 'Verbal Reasoning', duration_minutes: 40, completed: false },
+              { day: 'Sat', task_key: 'w2-d6', task_title: 'Timed Quantitative Section', topic: 'Quant Practice', duration_minutes: 75, completed: false },
+            ],
+          },
+          {
+            week_number: 3,
+            theme: 'Geometry, Statistics & Verbal Mastery',
+            days: [
+              { day: 'Mon', task_key: 'w3-d1', task_title: 'Geometry & Data Analysis', topic: 'Quantitative Reasoning', duration_minutes: 50, completed: false },
+              { day: 'Wed', task_key: 'w3-d3', task_title: 'Advanced Vocabulary & Essays', topic: 'Verbal + AW', duration_minutes: 50, completed: false },
+              { day: 'Sat', task_key: 'w3-d6', task_title: 'Full-Length Practice Test (GRE)', topic: 'Mock Exam', duration_minutes: 170, completed: false },
+            ],
+          },
+        ],
+      },
+      completed_tasks: [],
+    },
+    {
+      id: 'plan-3',
+      user_id: 'user-demo-1',
+      exam_id: 'act',
+      target_date: new Date(Date.now() + 45 * 86400000).toISOString().split('T')[0],
+      target_score: 35,
+      weekly_hours: 10,
+      is_active: false,
+      plan_json: {
+        title: 'ACT Composite 6-Week Roadmap',
+        description: 'Comprehensive preparation targeting your composite score',
+        weeks: [
+          {
+            week_number: 1,
+            theme: 'English & Reading Fundamentals',
+            days: [
+              { day: 'Mon', task_key: 'w1-d1', task_title: 'Grammar & Punctuation Basics', topic: 'English', duration_minutes: 45, completed: false },
+              { day: 'Wed', task_key: 'w1-d3', task_title: 'Reading Comprehension Passages', topic: 'Reading', duration_minutes: 45, completed: false },
+              { day: 'Fri', task_key: 'w1-d5', task_title: 'Pre-Algebra & Number Sense', topic: 'Math', duration_minutes: 45, completed: false },
+              { day: 'Sat', task_key: 'w1-d6', task_title: 'ACT Diagnostic Test (All Sections)', topic: 'Full Review', duration_minutes: 180, completed: false },
+            ],
+          },
+          {
+            week_number: 2,
+            theme: 'Math Skills & Advanced Reading',
+            days: [
+              { day: 'Mon', task_key: 'w2-d1', task_title: 'Algebra & Functions', topic: 'Math', duration_minutes: 50, completed: false },
+              { day: 'Wed', task_key: 'w2-d3', task_title: 'Complex Passages & Inferences', topic: 'Reading', duration_minutes: 45, completed: false },
+              { day: 'Fri', task_key: 'w2-d5', task_title: 'Rhetorical Skills & Style', topic: 'English', duration_minutes: 40, completed: false },
+              { day: 'Sat', task_key: 'w2-d6', task_title: 'Science Reasoning Introduction', topic: 'Science (Optional)', duration_minutes: 60, completed: false },
+            ],
+          },
+          {
+            week_number: 3,
+            theme: 'Geometry & Timed Practice',
+            days: [
+              { day: 'Mon', task_key: 'w3-d1', task_title: 'Geometry & Trigonometry', topic: 'Math', duration_minutes: 50, completed: false },
+              { day: 'Wed', task_key: 'w3-d3', task_title: 'Paired Passages Strategy', topic: 'Reading', duration_minutes: 45, completed: false },
+              { day: 'Sat', task_key: 'w3-d6', task_title: 'Full ACT Practice Exam', topic: 'Mock Exam', duration_minutes: 180, completed: false },
+            ],
+          },
+        ],
+      },
+      completed_tasks: [],
+    },
+    {
+      id: 'plan-4',
+      user_id: 'user-demo-1',
+      exam_id: 'gmat',
+      target_date: new Date(Date.now() + 45 * 86400000).toISOString().split('T')[0],
+      target_score: 700,
+      weekly_hours: 10,
+      is_active: false,
+      plan_json: {
+        title: 'GMAT Executive Assessment 6-Week Roadmap',
+        description: 'MBA entrance exam preparation with business analytics focus',
+        weeks: [
+          {
+            week_number: 1,
+            theme: 'Quantitative Foundations & Reading Strategy',
+            days: [
+              { day: 'Mon', task_key: 'w1-d1', task_title: 'Arithmetic & Number Properties', topic: 'Quantitative', duration_minutes: 55, completed: false },
+              { day: 'Wed', task_key: 'w1-d3', task_title: 'Critical Reasoning Basics', topic: 'Verbal', duration_minutes: 50, completed: false },
+              { day: 'Fri', task_key: 'w1-d5', task_title: 'Reading Comprehension (Business)', topic: 'Verbal', duration_minutes: 45, completed: false },
+              { day: 'Sat', task_key: 'w1-d6', task_title: 'GMAT Diagnostic Assessment', topic: 'Full Review', duration_minutes: 120, completed: false },
+            ],
+          },
+          {
+            week_number: 2,
+            theme: 'Algebra, Geometry & Advanced Reasoning',
+            days: [
+              { day: 'Mon', task_key: 'w2-d1', task_title: 'Algebra & Inequalities', topic: 'Quantitative', duration_minutes: 55, completed: false },
+              { day: 'Wed', task_key: 'w2-d3', task_title: 'Sentence Correction Mastery', topic: 'Verbal', duration_minutes: 50, completed: false },
+              { day: 'Fri', task_key: 'w2-d5', task_title: 'Data Sufficiency Training', topic: 'Quantitative', duration_minutes: 45, completed: false },
+              { day: 'Sat', task_key: 'w2-d6', task_title: 'Integrated Reasoning Module', topic: 'Integrated Reasoning', duration_minutes: 90, completed: false },
+            ],
+          },
+          {
+            week_number: 3,
+            theme: 'Statistics, Advanced Verbal & Essays',
+            days: [
+              { day: 'Mon', task_key: 'w3-d1', task_title: 'Statistics & Probability', topic: 'Quantitative', duration_minutes: 55, completed: false },
+              { day: 'Wed', task_key: 'w3-d3', task_title: 'Analytical Writing (AWA)', topic: 'Verbal + AW', duration_minutes: 60, completed: false },
+              { day: 'Sat', task_key: 'w3-d6', task_title: 'Full-Length GMAT Practice Exam', topic: 'Mock Exam', duration_minutes: 180, completed: false },
+            ],
+          },
+        ],
+      },
+      completed_tasks: [],
+    },
+    {
+      id: 'plan-5',
+      user_id: 'user-demo-1',
+      exam_id: 'shsat',
+      target_date: new Date(Date.now() + 45 * 86400000).toISOString().split('T')[0],
+      target_score: 560,
+      weekly_hours: 8,
+      is_active: false,
+      plan_json: {
+        title: 'SHSAT 6-Week Roadmap',
+        description: 'Selective High School Admissions Test preparation',
+        weeks: [
+          {
+            week_number: 1,
+            theme: 'Verbal & Math Fundamentals',
+            days: [
+              { day: 'Mon', task_key: 'w1-d1', task_title: 'Analogies & Logical Reasoning', topic: 'Verbal', duration_minutes: 45, completed: false },
+              { day: 'Wed', task_key: 'w1-d3', task_title: 'Number Sense & Operations', topic: 'Math', duration_minutes: 45, completed: false },
+              { day: 'Fri', task_key: 'w1-d5', task_title: 'Reading Comprehension Basics', topic: 'Verbal', duration_minutes: 40, completed: false },
+              { day: 'Sat', task_key: 'w1-d6', task_title: 'SHSAT Diagnostic Assessment', topic: 'Full Review', duration_minutes: 120, completed: false },
+            ],
+          },
+          {
+            week_number: 2,
+            theme: 'Advanced Verbal & Algebra',
+            days: [
+              { day: 'Mon', task_key: 'w2-d1', task_title: 'Sentence Completions & Word Problems', topic: 'Verbal', duration_minutes: 45, completed: false },
+              { day: 'Wed', task_key: 'w2-d3', task_title: 'Algebra & Equations', topic: 'Math', duration_minutes: 50, completed: false },
+              { day: 'Fri', task_key: 'w2-d5', task_title: 'Logic Games & Sequences', topic: 'Math', duration_minutes: 40, completed: false },
+              { day: 'Sat', task_key: 'w2-d6', task_title: 'Timed Verbal Section Practice', topic: 'Verbal', duration_minutes: 90, completed: false },
+            ],
+          },
+          {
+            week_number: 3,
+            theme: 'Geometry, Statistics & Integration',
+            days: [
+              { day: 'Mon', task_key: 'w3-d1', task_title: 'Geometry & Spatial Reasoning', topic: 'Math', duration_minutes: 50, completed: false },
+              { day: 'Wed', task_key: 'w3-d3', task_title: 'Data Interpretation & Graphs', topic: 'Math', duration_minutes: 45, completed: false },
+              { day: 'Sat', task_key: 'w3-d6', task_title: 'Full SHSAT Practice Exam', topic: 'Mock Exam', duration_minutes: 170, completed: false },
+            ],
+          },
+        ],
+      },
+      completed_tasks: [],
+    },
   ];
 
   reviewItems: MockReviewItem[] = [];

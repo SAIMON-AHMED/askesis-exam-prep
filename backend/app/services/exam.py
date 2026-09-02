@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.models.models import GeneratedQuestion, QuestionFormat, UserAttempt
 from app.services.question_generation import generate_questions
 from app.services.question_bank import select_exam_questions
+from app.services.scoring_strategies import estimate_scaled_score
 
 logger = logging.getLogger(__name__)
 
@@ -31,16 +32,6 @@ def _recent_seen_question_texts(db: Session, user_id: str, exam_type: str, topic
         .all()
     )
     return [row[0] for row in rows]
-
-# Simple raw-score -> scaled-score band lookup for SAT Math (out of 800), approximate.
-def _estimate_scaled_score(raw_score: int, total_questions: int) -> tuple[int, int]:
-    if total_questions == 0:
-        return (200, 200)
-    pct = raw_score / total_questions
-    center = int(200 + pct * 600)  # 200-800 range
-    low = max(200, center - 40)
-    high = min(800, center + 40)
-    return (low, high)
 
 
 def build_exam_questions(
@@ -143,7 +134,7 @@ def _generate_exam_questions(
 
 
 def score_exam(
-    questions: list[GeneratedQuestion], answers: dict[str, str]
+    questions: list[GeneratedQuestion], answers: dict[str, str], exam_type: str = "sat", subject_id: str | None = None
 ) -> dict[str, Any]:
     raw_score = 0
     topic_stats: dict[str, dict[str, int]] = {}
@@ -157,7 +148,7 @@ def score_exam(
             stats["correct"] += 1
 
     total = len(questions)
-    scaled_low, scaled_high = _estimate_scaled_score(raw_score, total)
+    estimate = estimate_scaled_score(exam_type, raw_score, total, subject_id=subject_id)
     topic_breakdown = [
         {"topic": topic, "correct": s["correct"], "total": s["total"]} for topic, s in topic_stats.items()
     ]
@@ -165,7 +156,9 @@ def score_exam(
     return {
         "raw_score": raw_score,
         "total_questions": total,
-        "scaled_score_low": scaled_low,
-        "scaled_score_high": scaled_high,
+        "scaled_score_low": estimate.scaled_score_low,
+        "scaled_score_high": estimate.scaled_score_high,
+        "score_label": estimate.label,
+        "is_readiness_estimate": estimate.is_readiness_estimate,
         "topic_breakdown": topic_breakdown,
     }

@@ -16,7 +16,7 @@ MAX_DIFFICULTY = 5
 class AdaptiveInput:
     accuracy_rate: float  # 0.0-1.0, over last 20 questions
     avg_time_per_question: float  # seconds
-    topic_mastery_score: float  # 0-100
+    topic_mastery_score: float  # 0-100; scoped per exam when derived from UserProgress (Phase 1 step 8)
     current_difficulty: int
 
 

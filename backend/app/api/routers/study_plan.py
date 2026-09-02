@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.core.exam_config import normalize_exam_id
 from app.db.session import get_db
 from app.models.models import StudyPlan, User, UserProgress
 from app.schemas.schemas import StudyPlanGenerateRequest, StudyPlanOut, StudyPlanTaskProgress
@@ -20,7 +21,16 @@ def create_study_plan(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> StudyPlan:
-    progress_rows = db.query(UserProgress).filter(UserProgress.user_id == current_user.id).all()
+    exam_id = None
+    if payload.exam_id is not None:
+        exam_id = normalize_exam_id(payload.exam_id)
+        if exam_id is None:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unknown exam_id")
+
+    progress_query = db.query(UserProgress).filter(UserProgress.user_id == current_user.id)
+    if exam_id is not None:
+        progress_query = progress_query.filter(UserProgress.exam_type == exam_id)
+    progress_rows = progress_query.all()
     avg_mastery = (
         sum(p.mastery_score for p in progress_rows) / len(progress_rows) if progress_rows else 0.0
     )
@@ -46,6 +56,7 @@ def create_study_plan(
 
     study_plan = StudyPlan(
         user_id=current_user.id,
+        exam_id=exam_id,
         exam_date=payload.exam_date,
         target_score=payload.target_score,
         weekly_hours=payload.available_weekly_hours,
@@ -59,15 +70,27 @@ def create_study_plan(
 
 @router.get("/active", response_model=StudyPlanOut)
 def get_active_study_plan(
+    exam_id: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> StudyPlan:
-    plan = (
-        db.query(StudyPlan)
-        .filter(StudyPlan.user_id == current_user.id, StudyPlan.is_active.is_(True))
-        .order_by(StudyPlan.created_at.desc())
-        .first()
-    )
+    # If exam_id is provided, return the most recent plan for that exam (regardless of active status)
+    # This allows users to view study plans for different exams without deactivating the current one
+    if exam_id is not None:
+        normalized = normalize_exam_id(exam_id)
+        if normalized is None:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unknown exam_id")
+        plan = db.query(StudyPlan).filter(
+            StudyPlan.user_id == current_user.id,
+            StudyPlan.exam_id == normalized
+        ).order_by(StudyPlan.created_at.desc()).first()
+    else:
+        # If no exam_id provided, return the currently active plan (from any exam)
+        plan = db.query(StudyPlan).filter(
+            StudyPlan.user_id == current_user.id,
+            StudyPlan.is_active.is_(True)
+        ).order_by(StudyPlan.created_at.desc()).first()
+    
     if plan is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No saved study plan found")
     return plan

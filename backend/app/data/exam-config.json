@@ -1,0 +1,113 @@
+{
+  "$schema": "Canonical exam configuration — single source of truth for frontend + backend. See PLAN Phase 0.",
+  "exams": {
+    "sat": {
+      "id": "sat",
+      "displayName": "SAT",
+      "family": "single",
+      "scoring": {
+        "strategy": "sat_section_sum",
+        "sections": [
+          { "id": "reading_writing", "name": "Reading & Writing", "min": 200, "max": 800 },
+          { "id": "math", "name": "Math", "min": 200, "max": 800 }
+        ],
+        "combined": { "min": 400, "max": 1600 },
+        "provenance": "College Board SAT Suite scoring, 2024 digital SAT format"
+      },
+      "diagnostic": { "defaultQuestionCount": 10 },
+      "pacing": { "secondsPerQuestionTarget": 75 }
+    },
+    "act": {
+      "id": "act",
+      "displayName": "ACT",
+      "family": "single",
+      "scoring": {
+        "strategy": "act_composite_post_sept_2025",
+        "sections": [
+          { "id": "english", "name": "English", "min": 1, "max": 36 },
+          { "id": "math", "name": "Math", "min": 1, "max": 36 },
+          { "id": "reading", "name": "Reading", "min": 1, "max": 36 },
+          { "id": "science", "name": "Science", "min": 1, "max": 36, "optional": true, "affectsComposite": false }
+        ],
+        "combined": { "min": 1, "max": 36, "label": "Composite" },
+        "provenance": "ACT official multi-scores guidance: for test dates Sept 2025 onward, composite = English + Math + Reading only; Science is optional and reported separately."
+      },
+      "diagnostic": { "defaultQuestionCount": 10 },
+      "pacing": { "secondsPerQuestionTarget": 50 }
+    },
+    "gre": {
+      "id": "gre",
+      "displayName": "GRE",
+      "family": "single",
+      "scoring": {
+        "strategy": "gre_per_section",
+        "sections": [
+          { "id": "verbal", "name": "Verbal Reasoning", "min": 130, "max": 170 },
+          { "id": "quant", "name": "Quantitative Reasoning", "min": 130, "max": 170 },
+          { "id": "writing", "name": "Analytical Writing", "min": 0, "max": 6 }
+        ],
+        "combined": null,
+        "provenance": "ETS GRE General Test scoring — Verbal and Quant are reported and forecast separately, never combined into one number."
+      },
+      "diagnostic": { "defaultQuestionCount": 10 },
+      "pacing": { "secondsPerQuestionTarget": 90 }
+    },
+    "gmat": {
+      "id": "gmat",
+      "displayName": "GMAT Exam",
+      "family": "single",
+      "scoring": {
+        "strategy": "gmat_three_section",
+        "sections": [
+          { "id": "quant", "name": "Quantitative", "min": 60, "max": 90 },
+          { "id": "verbal", "name": "Verbal", "min": 60, "max": 90 },
+          { "id": "data_insights", "name": "Data Insights", "min": 60, "max": 90 }
+        ],
+        "combined": { "min": 205, "max": 805 },
+        "provenance": "mba.com official GMAT Exam scoring: 205-805 total, three sections each scored 60-90. Do not call this 'GMAT Focus Edition' in UI copy."
+      },
+      "diagnostic": { "defaultQuestionCount": 10 },
+      "pacing": { "secondsPerQuestionTarget": 100 }
+    },
+    "shsat": {
+      "id": "shsat",
+      "displayName": "SHSAT",
+      "family": "single",
+      "scoring": {
+        "strategy": "shsat_composite",
+        "sections": [
+          { "id": "ela", "name": "English Language Arts", "min": 0, "max": 350 },
+          { "id": "math", "name": "Mathematics", "min": 0, "max": 350 }
+        ],
+        "combined": { "min": 0, "max": 700 },
+        "provenance": "NYC DOE SHSAT scoring guide — composite is sum of the two raw-scaled section scores, no official public conversion table; treat as readiness estimate only."
+      },
+      "diagnostic": { "defaultQuestionCount": 10 },
+      "pacing": { "secondsPerQuestionTarget": 80 }
+    },
+    "regents": {
+      "id": "regents",
+      "displayName": "Regents",
+      "family": "multi_subject",
+      "passingStandard": 65,
+      "scoring": {
+        "strategy": "regents_versioned_subject",
+        "combined": null,
+        "provenance": "NYSED: raw-to-scaled conversion charts vary by subject AND by exam administration/version. No single formula is valid across administrations — do not hardcode one."
+      },
+      "subjects": [
+        { "id": "algebra-i", "name": "Algebra I", "scale": { "min": 0, "max": 100 }, "conversionProvenance": null },
+        { "id": "geometry", "name": "Geometry", "scale": { "min": 0, "max": 100 }, "conversionProvenance": null },
+        { "id": "algebra-ii", "name": "Algebra II", "scale": { "min": 0, "max": 100 }, "conversionProvenance": null },
+        { "id": "living-environment", "name": "Living Environment", "scale": { "min": 0, "max": 100 }, "conversionProvenance": null },
+        { "id": "earth-science", "name": "Earth Science", "scale": { "min": 0, "max": 100 }, "conversionProvenance": null },
+        { "id": "physical-science", "name": "Physical Science", "scale": { "min": 0, "max": 100 }, "conversionProvenance": null },
+        { "id": "global-history", "name": "Global History & Geography", "scale": { "min": 0, "max": 100 }, "conversionProvenance": null },
+        { "id": "us-history", "name": "US History & Government", "scale": { "min": 0, "max": 100 }, "conversionProvenance": null },
+        { "id": "ela", "name": "English Language Arts", "scale": { "min": 0, "max": 100 }, "conversionProvenance": null }
+      ],
+      "diagnostic": { "defaultQuestionCount": 10 },
+      "pacing": { "secondsPerQuestionTarget": 90 }
+    }
+  }
+}

@@ -36,26 +36,40 @@ import { useUserSettings } from '@/hooks/useProfile';
 import { useExam } from '@/context/ExamContext';
 
 export default function AnalyticsPage() {
-  const { data: overview } = useAnalyticsOverview();
-  const { data: studyTime, loading: studyTimeLoading } = useStudyTimeBreakdown();
-  const { data: topicPerf } = useTopicPerformance();
-  const { data: examHistory, loading: historyLoading } = useExamHistory(5);
-  const { data: weeklyStats, loading: weeklyLoading } = useWeeklyStats();
-  const { data: streak } = useStudyStreak();
-  const { settings: userSettings } = useUserSettings();
   const { selectedExam } = useExam();
+  const { data: userSettings } = useUserSettings();
+  const examType = selectedExam?.id; // Canonical source from context
+  
+  const { data: overview } = useAnalyticsOverview(examType);
+  const { data: studyTime, loading: studyTimeLoading } = useStudyTimeBreakdown();
+  const { data: topicPerf } = useTopicPerformance(examType);
+  const { data: examHistory, loading: historyLoading } = useExamHistory(5, examType);
+  const { data: weeklyStats, loading: weeklyLoading } = useWeeklyStats(examType);
+  const { data: streak } = useStudyStreak();
 
   const [showReportModal, setShowReportModal] = useState(false);
 
-  const avgScore = overview?.average_score ?? 0;
-  const studyHours = overview?.total_study_hours ?? 0;
-  const examsCount = overview?.exams_completed ?? 0;
-  const activeExam = (
-    selectedExam?.id ||
-    userSettings?.target_exam ||
-    examHistory[0]?.exam_type ||
-    'SAT'
-  ).toUpperCase();
+  // Extract metrics based on the new analytics structure
+  // Overview now returns {global_metrics, exam_metrics} when exam_type is provided
+  let avgScore = 0;
+  let studyHours = 0;
+  let examsCount = 0;
+  
+  if (overview) {
+    if (examType && overview.exam_metrics) {
+      // Use exam-filtered metrics when exam is selected
+      avgScore = overview.exam_metrics.average_score ?? 0;
+      studyHours = overview.exam_metrics.total_study_hours ?? 0;
+      examsCount = overview.exam_metrics.exams_completed ?? 0;
+    } else {
+      // Use global metrics as fallback or when no exam selected
+      avgScore = (overview as any).average_score ?? overview.global_metrics?.average_score ?? 0;
+      studyHours = (overview as any).total_study_hours ?? overview.global_metrics?.total_study_hours ?? 0;
+      examsCount = (overview as any).exams_completed ?? overview.global_metrics?.exams_completed ?? 0;
+    }
+  }
+
+  const activeExam = selectedExam?.displayName || 'SAT';
 
   // Calculate dynamic pacing from topic performance data if available
   const avgSeconds =

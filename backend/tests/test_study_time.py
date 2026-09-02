@@ -36,7 +36,7 @@ def test_log_study_time_persists_session_and_updates_summary():
 
     assert result["success"] is True
     assert result["today_study_hours"] == 0.5
-    assert result["logged_item"]["exam_type"] == "ACT"
+    assert result["logged_item"]["exam_type"] == "act"
     assert result["logged_item"]["notes"] == "Linear equations"
     assert get_today(db, user)["logs"][0]["duration_minutes"] == 30
 

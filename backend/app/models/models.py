@@ -152,6 +152,8 @@ class UserAttempt(Base):
     time_taken_seconds: Mapped[float] = mapped_column(Float, nullable=False)
     difficulty: Mapped[int] = mapped_column(Integer, nullable=False)
     topic: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Lowercase canonical exam id ("sat", "act", ...); nullable until backfilled, see exam_backfill.py.
+    exam_type: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="attempts")
@@ -183,6 +185,9 @@ class UserProgress(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
     topic: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Lowercase canonical exam id; nullable until backfilled (ambiguous rows are left
+    # null for recomputation rather than guessed — see exam_backfill.py).
+    exam_type: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
     mastery_score: Mapped[float] = mapped_column(Float, default=0.0)  # 0-100
     current_difficulty: Mapped[int] = mapped_column(Integer, default=1)
     accuracy_rate: Mapped[float] = mapped_column(Float, default=0.0)
@@ -201,6 +206,8 @@ class StudyPlan(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    # Lowercase canonical exam id; nullable until backfilled, see exam_backfill.py.
+    exam_id: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
     exam_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     target_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     weekly_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -257,6 +264,8 @@ class ExamSession(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
     exam_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    # Regents subject id (e.g. "algebra-i"); only meaningful when exam_type == "regents".
+    exam_subject: Mapped[str | None] = mapped_column(String(50), nullable=True)
     session_type: Mapped[str] = mapped_column(String(30), nullable=False, default="mock")
     duration_seconds: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[ExamSessionStatus] = mapped_column(

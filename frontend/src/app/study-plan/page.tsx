@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { useExam } from "@/context/ExamContext";
 
 function taskKey(weekNumber: number, day: string, taskIndex: number) {
   return `${weekNumber}-${day}-${taskIndex}`;
@@ -18,6 +19,7 @@ function countTasks(plan: any): number {
 }
 
 export default function StudyPlanPage() {
+  const { selectedExam } = useExam();
   const [examDate, setExamDate] = useState("");
   const [targetScore, setTargetScore] = useState(1400);
   const [weeklyHours, setWeeklyHours] = useState(5);
@@ -30,8 +32,9 @@ export default function StudyPlanPage() {
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
   useEffect(() => {
+    const examIdQuery = selectedExam?.id ? `?exam_id=${encodeURIComponent(selectedExam.id)}` : '';
     api
-      .get("/study-plan/active")
+      .get(`/study-plan/active${examIdQuery}`)
       .then((res) => {
         setPlan(res.data.plan_json);
         setPlanId(res.data.id);
@@ -41,7 +44,7 @@ export default function StudyPlanPage() {
       .catch(() => {
         // no saved plan yet, that's fine
       });
-  }, []);
+  }, [selectedExam?.id]);
 
   async function generatePlan() {
     setLoading(true);

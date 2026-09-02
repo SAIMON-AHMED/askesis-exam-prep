@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.core.exam_config import normalize_exam_id
 from app.db.session import get_db
 from app.models.models import ExamSession, ExamSessionStatus, GeneratedQuestion, User
 from app.schemas.schemas import (
@@ -29,10 +30,11 @@ def start_exam(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ExamSessionOut:
+    exam_type = normalize_exam_id(payload.exam_type) or payload.exam_type.lower().strip()
     started = time.perf_counter()
     try:
         questions = build_exam_questions(
-            db, payload.exam_type, payload.topics, payload.number_of_questions, user_id=current_user.id
+            db, exam_type, payload.topics, payload.number_of_questions, user_id=current_user.id
         )
     except Exception as exc:
         logger.error("Exam question generation failed: %s", exc)
@@ -57,7 +59,8 @@ def start_exam(
 
     session = ExamSession(
         user_id=current_user.id,
-        exam_type=payload.exam_type,
+        exam_type=exam_type,
+        exam_subject=payload.subject,
         duration_seconds=payload.duration_minutes * 60,
         status=ExamSessionStatus.in_progress,
         question_ids=[q.id for q in questions],
@@ -154,7 +157,7 @@ def submit_exam(
     questions = [db.get(GeneratedQuestion, qid) for qid in session.question_ids]
     questions = [q for q in questions if q is not None]
 
-    result = score_exam(questions, payload.answers)
+    result = score_exam(questions, payload.answers, exam_type=session.exam_type, subject_id=session.exam_subject)
 
     session.answers = payload.answers
     session.raw_score = result["raw_score"]
@@ -171,6 +174,8 @@ def submit_exam(
         total_questions=session.total_questions,
         scaled_score_low=session.scaled_score_low,
         scaled_score_high=session.scaled_score_high,
+        score_label=result["score_label"],
+        is_readiness_estimate=result["is_readiness_estimate"],
         topic_breakdown=session.topic_breakdown,
         status=session.status.value,
         submitted_at=session.submitted_at,

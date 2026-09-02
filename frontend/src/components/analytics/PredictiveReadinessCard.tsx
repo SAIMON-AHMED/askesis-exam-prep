@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { useNotification } from '@/context/NotificationContext';
+import { getScoringInfo, getExamDefaultTarget, getExamScoringBounds } from '@/lib/examScoring';
 
 interface PredictiveReadinessProps {
   averageScore?: number;
@@ -24,114 +25,56 @@ export const PredictiveReadinessCard: React.FC<PredictiveReadinessProps> = ({
   const { success, error: notifyError } = useNotification();
   const hasData = examsCompleted > 0 || averageScore > 0 || totalHours > 0;
 
-  const getDefaultTarget = (exam: string) => {
-    switch (exam.toUpperCase()) {
-      case 'SAT': return 1500;
-      case 'GRE': return 325;
-      case 'ACT': return 33;
-      case 'SHSAT': return 560;
-      case 'GMAT': return 720;
-      default: return 90;
-    }
-  };
+  // Load scoring info from shared exam-config.json (via examScoring utility)
+  const scoringInfo = getScoringInfo(primaryExam?.toLowerCase());
+  const bounds = getExamScoringBounds(primaryExam?.toLowerCase());
+  const defaultTarget = getExamDefaultTarget(primaryExam?.toLowerCase());
 
-  const getExamBounds = (exam: string) => {
-    switch (exam.toUpperCase()) {
-      case 'SAT': return { min: 400, max: 1600, step: 10, presets: [1300, 1400, 1480, 1520, 1560, 1600] };
-      case 'GRE': return { min: 260, max: 340, step: 1, presets: [310, 320, 325, 330, 335, 340] };
-      case 'ACT': return { min: 1, max: 36, step: 1, presets: [28, 30, 32, 34, 35, 36] };
-      case 'SHSAT': return { min: 200, max: 700, step: 5, presets: [500, 540, 580, 620, 670, 700] };
-      case 'GMAT': return { min: 200, max: 800, step: 10, presets: [640, 680, 700, 720, 760, 800] };
-      default: return { min: 1, max: 100, step: 1, presets: [75, 80, 85, 90, 95, 100] };
-    }
-  };
-
-  const bounds = getExamBounds(primaryExam);
-  const [currentTarget, setCurrentTarget] = useState<number>(targetScore || getDefaultTarget(primaryExam));
+  const [currentTarget, setCurrentTarget] = useState<number>(targetScore || defaultTarget);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editInput, setEditInput] = useState<number>(currentTarget);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
   useEffect(() => {
-    const examBounds = getExamBounds(primaryExam);
-    const validSavedTarget = targetScore && targetScore >= examBounds.min && targetScore <= examBounds.max;
-    const nextTarget = validSavedTarget ? targetScore : getDefaultTarget(primaryExam);
+    const newInfo = getScoringInfo(primaryExam?.toLowerCase());
+    const validSavedTarget = targetScore && targetScore >= newInfo.min && targetScore <= newInfo.max;
+    const nextTarget = validSavedTarget ? targetScore : getExamDefaultTarget(primaryExam?.toLowerCase());
     setCurrentTarget(nextTarget);
     setEditInput(nextTarget);
   }, [primaryExam, targetScore]);
 
-  // Calculate scaled predictive score based on exam format
-  const getScaledPrediction = (exam: string, scorePercent: number) => {
-    const activeTarget = currentTarget || getDefaultTarget(exam);
+  // Calculate scaled predictive score based on exam format (from shared config)
+  const getScaledPrediction = (examId: string | undefined, scorePercent: number) => {
+    const info = getScoringInfo(examId?.toLowerCase());
+    const activeTarget = currentTarget || info.defaultTarget;
 
     if (!hasData) {
-      switch (exam.toUpperCase()) {
-        case 'SAT':
-          return { score: 0, max: 1600, range: 'N/A (Take a practice test)', target: activeTarget, scaleName: 'SAT Scale (400-1600)' };
-        case 'GRE':
-          return { score: 0, max: 340, range: 'N/A (Take a practice test)', target: activeTarget, scaleName: 'GRE General Scale (260-340)' };
-        case 'ACT':
-          return { score: 0, max: 36, range: 'N/A (Take a practice test)', target: activeTarget, scaleName: 'ACT Composite (1-36)' };
-        case 'SHSAT':
-          return { score: 0, max: 700, range: 'N/A (Take a practice test)', target: activeTarget, scaleName: 'SHSAT Scaled (200-700)' };
-        default:
-          return { score: 0, max: 100, range: 'N/A (Take a practice test)', target: activeTarget, scaleName: 'Percentage Scale' };
-      }
+      return {
+        score: 0,
+        max: info.max,
+        range: 'N/A (Take a practice test)',
+        target: activeTarget,
+        scaleName: info.label,
+      };
     }
 
     const norm = Math.min(100, Math.max(1, scorePercent));
-    switch (exam.toUpperCase()) {
-      case 'SAT': {
-        const scaled = Math.round((norm / 100) * 1200 + 400); // 400 - 1600
-        const rounded = Math.round(scaled / 10) * 10;
-        return {
-          score: rounded,
-          max: 1600,
-          range: `${rounded - 30} – ${Math.min(1600, rounded + 30)}`,
-          target: activeTarget,
-          scaleName: 'SAT Scale (400-1600)',
-        };
-      }
-      case 'GRE': {
-        const scaled = Math.round((norm / 100) * 80 + 260); // 260 - 340
-        return {
-          score: scaled,
-          max: 340,
-          range: `${scaled - 2} – ${Math.min(340, scaled + 2)}`,
-          target: activeTarget,
-          scaleName: 'GRE General Scale (260-340)',
-        };
-      }
-      case 'ACT': {
-        const scaled = Math.round((norm / 100) * 35 + 1); // 1 - 36
-        return {
-          score: scaled,
-          max: 36,
-          range: `${scaled - 1} – ${Math.min(36, scaled + 1)}`,
-          target: activeTarget,
-          scaleName: 'ACT Composite (1-36)',
-        };
-      }
-      case 'SHSAT': {
-        const scaled = Math.round((norm / 100) * 500 + 200); // 200 - 700
-        return {
-          score: scaled,
-          max: 700,
-          range: `${scaled - 20} – ${Math.min(700, scaled + 20)}`,
-          target: activeTarget,
-          scaleName: 'SHSAT Scaled (200-700)',
-        };
-      }
-      default: {
-        return {
-          score: Math.round(norm),
-          max: 100,
-          range: `${Math.round(norm - 3)}% – ${Math.min(100, Math.round(norm + 3))}%`,
-          target: activeTarget,
-          scaleName: 'Percentage Scale',
-        };
-      }
-    }
+    const range = info.max - info.min;
+    const scaled = Math.round((norm / 100) * range + info.min);
+
+    // Round to nearest step
+    const rounded = Math.round(scaled / info.step) * info.step;
+
+    // Calculate confidence range (±5% of range or ±1 step, whichever is larger)
+    const confidenceMargin = Math.max(info.step, Math.round(range * 0.05));
+
+    return {
+      score: rounded,
+      max: info.max,
+      range: `${Math.max(info.min, rounded - confidenceMargin)} – ${Math.min(info.max, rounded + confidenceMargin)}`,
+      target: activeTarget,
+      scaleName: info.label,
+    };
   };
 
   const prediction = getScaledPrediction(primaryExam, averageScore);
@@ -163,8 +106,8 @@ export const PredictiveReadinessCard: React.FC<PredictiveReadinessProps> = ({
 
   const handleSaveTarget = async () => {
     const val = Number(editInput);
-    if (isNaN(val) || val < bounds.min || val > bounds.max) {
-      notifyError(`Please enter a valid target score between ${bounds.min} and ${bounds.max} for ${primaryExam}.`);
+    if (isNaN(val) || val < scoringInfo.min || val > scoringInfo.max) {
+      notifyError(`Please enter a valid target score between ${scoringInfo.min} and ${scoringInfo.max} for ${primaryExam}.`);
       return;
     }
 
@@ -172,7 +115,7 @@ export const PredictiveReadinessCard: React.FC<PredictiveReadinessProps> = ({
     try {
       await api.put('/profile/settings', {
         target_score: val,
-        target_exam: primaryExam.toLowerCase(),
+        target_exam: primaryExam?.toLowerCase(),
       });
       setCurrentTarget(val);
       setIsEditing(false);

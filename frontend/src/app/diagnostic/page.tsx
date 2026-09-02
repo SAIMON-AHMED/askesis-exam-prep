@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { EXAMS } from "@/lib/examConstants";
 import { getCurriculumByExamId } from "@/lib/curriculumData";
+import { useExam } from "@/context/ExamContext";
+import { useNotification } from "@/context/NotificationContext";
 
 interface DiagnosticQuestion {
   id: string;
@@ -24,6 +26,8 @@ interface DiagnosticResult {
 
 export default function DiagnosticPage() {
   const router = useRouter();
+  const { selectedExam, setSelectedExam } = useExam();
+  const { success: showSuccess, error: showError } = useNotification();
   const [exam, setExam] = useState("sat");
   const [count, setCount] = useState(5);
   const [questions, setQuestions] = useState<DiagnosticQuestion[]>([]);
@@ -32,6 +36,7 @@ export default function DiagnosticPage() {
   const [result, setResult] = useState<DiagnosticResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [settingPrimary, setSettingPrimary] = useState(false);
 
   useEffect(() => {
     setQuestions([]);
@@ -72,9 +77,23 @@ export default function DiagnosticPage() {
     }
   }
 
+  async function setPrimaryExam() {
+    setSettingPrimary(true);
+    try {
+      await api.put("/onboarding", { primary_exam_id: exam });
+      setSelectedExam(exam);
+      showSuccess(`${EXAMS[exam].displayName} is now your primary exam!`);
+    } catch {
+      showError("Failed to set primary exam. Please try again.");
+    } finally {
+      setSettingPrimary(false);
+    }
+  }
+
   if (result) {
     const accuracyPercentage = Math.round((result.raw_score / result.total_questions) * 100);
     const weakestTopics = result.weak_topics.slice(0, 3);
+    const isDifferentFromSelected = selectedExam && selectedExam.id !== exam;
 
     return (
       <main className="card fade-in" style={{ maxWidth: 640, margin: "0 auto", textAlign: "center" }}>
@@ -98,6 +117,86 @@ export default function DiagnosticPage() {
             {weakestTopics.map((topic) => (
               <span
                 key={topic}
+                style={{
+                  backgroundColor: "#fef3c7",
+                  color: "#b45309",
+                  padding: "6px 12px",
+                  borderRadius: 20,
+                  fontSize: 14,
+                  fontWeight: 500,
+                }}
+              >
+                {topic}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ backgroundColor: "#f0f9ff", padding: 16, borderRadius: 8, marginBottom: 24 }}>
+          <p style={{ margin: 0, fontSize: 14, color: "#0c4a6e", lineHeight: 1.5 }}>
+            <strong>How it works:</strong> Askesis adapts questions to your skill level and focuses on your weaker topics to get you to your target score faster.
+          </p>
+        </div>
+
+        {/* Prompt to set as primary exam (exception to anti-accidental-switch rule) */}
+        {isDifferentFromSelected && (
+          <div style={{
+            backgroundColor: "#dbeafe",
+            border: "1px solid #93c5fd",
+            borderRadius: 8,
+            padding: 16,
+            marginBottom: 24,
+          }}>
+            <p style={{ fontSize: 14, color: "#1e40af", marginBottom: 12, marginTop: 0 }}>
+              <strong>Make {EXAMS[exam].displayName} your primary exam?</strong>
+            </p>
+            <p style={{ fontSize: 13, color: "#3730a3", marginBottom: 12, margin: 0 }}>
+              This will update your dashboard, analytics, and study plan to focus on {EXAMS[exam].displayName}.
+            </p>
+            <button
+              onClick={setPrimaryExam}
+              disabled={settingPrimary}
+              style={{
+                padding: "8px 16px",
+                borderRadius: "4px",
+                border: "none",
+                background: "#3b82f6",
+                color: "white",
+                cursor: settingPrimary ? "not-allowed" : "pointer",
+                fontSize: "14px",
+                fontWeight: "500",
+                opacity: settingPrimary ? 0.6 : 1,
+              }}
+            >
+              {settingPrimary ? "Setting..." : `Yes, use ${EXAMS[exam].displayName}`}
+            </button>
+          </div>
+        )}
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <button
+            className="btn-primary"
+            type="button"
+            onClick={() => router.push("/practice")}
+            style={{ width: "100%", fontSize: 16, fontWeight: 600, padding: "12px 24px" }}
+          >
+            🎯 Start targeted practice
+          </button>
+          <button
+            className="btn-secondary"
+            type="button"
+            onClick={() => router.push("/study-plan")}
+            style={{ width: "100%" }}
+          >
+            View study plan
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="card fade-in">
                 style={{
                   backgroundColor: "#fef3c7",
                   color: "#b45309",

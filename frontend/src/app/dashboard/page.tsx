@@ -121,6 +121,8 @@ export default function DashboardPage() {
 
   const fetchDashboardData = useCallback(async () => {
     try {
+      const examQuery = selectedExam?.id ? `?exam_type=${encodeURIComponent(selectedExam.id)}` : '';
+      const examIdQuery = selectedExam?.id ? `?exam_id=${encodeURIComponent(selectedExam.id)}` : '';
       const [
         recommendationRes,
         subscriptionRes,
@@ -134,9 +136,9 @@ export default function DashboardPage() {
         api.get("/subscription/me"),
         api.get("/onboarding"),
         api.get("/auth/me"),
-        api.get("/analytics/overview"),
-        api.get("/analytics/topic-performance"),
-        api.get("/study-plan/active"),
+        api.get(`/analytics/overview${examQuery}`),
+        api.get(`/analytics/topic-performance${examQuery}`),
+        api.get(`/study-plan/active${examIdQuery}`),
       ]);
 
       if (recommendationRes.status === "fulfilled" && recommendationRes.value.data) {
@@ -152,7 +154,13 @@ export default function DashboardPage() {
         setUser(userRes.value.data);
       }
       if (analyticsRes.status === "fulfilled" && analyticsRes.value.data) {
-        setAnalytics(analyticsRes.value.data);
+        const analyticsData = analyticsRes.value.data;
+        // Handle new {global_metrics, exam_metrics} structure from backend
+        if (selectedExam && analyticsData.exam_metrics) {
+          setAnalytics(analyticsData.exam_metrics);
+        } else {
+          setAnalytics(analyticsData.global_metrics || analyticsData);
+        }
       }
       if (topicsRes.status === "fulfilled" && topicsRes.value.data) {
         setTopicPerformance(topicsRes.value.data);
@@ -165,7 +173,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedExam]);
 
   useEffect(() => {
     fetchDashboardData();

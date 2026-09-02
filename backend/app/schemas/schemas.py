@@ -219,6 +219,7 @@ class PracticeQuotaOut(BaseModel):
 # ---------- Progress ----------
 class UserProgressOut(BaseModel):
     topic: str
+    exam_type: str | None = None
     mastery_score: float
     current_difficulty: int
     accuracy_rate: float
@@ -232,6 +233,7 @@ class UserProgressOut(BaseModel):
 
 # ---------- Study plan ----------
 class StudyPlanGenerateRequest(BaseModel):
+    exam_id: str | None = None
     exam_date: datetime | None = None
     target_score: int | None = None
     weak_topics: list[str] = []
@@ -240,6 +242,7 @@ class StudyPlanGenerateRequest(BaseModel):
 
 class StudyPlanOut(BaseModel):
     id: str
+    exam_id: str | None = None
     exam_date: datetime | None = None
     target_score: int | None = None
     weekly_hours: float | None = None
@@ -317,7 +320,8 @@ class MyExamAccessOut(BaseModel):
 
 # ---------- Timed exam ----------
 class ExamStartRequest(BaseModel):
-    exam_type: str = "SAT"
+    exam_type: str = "sat"
+    subject: str | None = None  # Regents subject id, e.g. "algebra-i"; ignored by other exams
     topics: list[str] = Field(default_factory=list)  # empty = mixed default topics
     number_of_questions: int = Field(ge=5, le=60, default=20)
     duration_minutes: int = Field(ge=5, le=240, default=35)
@@ -358,6 +362,8 @@ class ExamResultOut(BaseModel):
     total_questions: int
     scaled_score_low: int | None = None
     scaled_score_high: int | None = None
+    score_label: str | None = None
+    is_readiness_estimate: bool = True
     topic_breakdown: list[TopicBreakdown]
     status: str
     submitted_at: datetime | None = None
@@ -377,11 +383,26 @@ class ExamSessionSummaryOut(BaseModel):
 
 
 # ---------- Analytics ----------
-class AnalyticsOverviewResponse(BaseModel):
+class AnalyticsMetrics(BaseModel):
     total_study_hours: float
     exams_completed: int
     average_score: float
     last_7_days_study_hours: float
+
+
+class AnalyticsOverviewResponse(BaseModel):
+    global_metrics: AnalyticsMetrics
+    exam_metrics: AnalyticsMetrics | None = None  # populated when exam_type query param is provided
+
+
+class DayStudyStats(BaseModel):
+    date: str  # YYYY-MM-DD
+    study_hours: float
+
+
+class WeeklyStatsResponse(BaseModel):
+    global_daily: list[DayStudyStats]
+    exam_daily: list[DayStudyStats] | None = None  # populated when exam_type query param is provided
 
 
 class StudyTimeResponse(BaseModel):
@@ -393,7 +414,7 @@ class StudyTimeResponse(BaseModel):
 class StudyTimeLogRequest(BaseModel):
     duration_minutes: int = Field(ge=1, le=1440)
     topic: str = Field(default="General Study & Practice", min_length=1, max_length=255)
-    exam_type: str = Field(default="SAT", min_length=1, max_length=50)
+    exam_type: str = Field(default="sat", min_length=1, max_length=50)
     activity_type: str | None = Field(default=None, max_length=100)
     notes: str | None = Field(default=None, max_length=2000)
 
@@ -409,6 +430,7 @@ class StudyReminderUpdate(BaseModel):
 
 class TopicPerformanceResponse(BaseModel):
     topic: str
+    exam_type: str | None = None
     mastery_score: float
     accuracy_rate: float
     average_time_per_question: float
